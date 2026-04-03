@@ -1,0 +1,116 @@
+<div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+    <h2 class="text-xl font-bold mb-4 text-purple-400 border-b border-gray-700 pb-2">Welcome System</h2>
+    <div class="space-y-6">
+        <div id="welcome-config" class="transition-all duration-300 ease-in-out">
+            <div class="flex items-center justify-between mt-4">
+                <h3 class="block text-sm font-medium text-gray-300">AI Messages</h3>
+                <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="module-toggle" id="toggle-ai-messages"
+                           class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                           checked/>
+                    <label for="toggle-ai-messages"
+                           class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 mb-2 w-full">Enable AI messages to welcome new members.</p>
+            <div id="welcome-message-div">
+                <label for="welcome-message" class="block text-sm font-medium text-gray-300 mb-2">Welcome
+                    Message</label>
+                <textarea id="welcome-message" name="welcome-message" rows="3" maxlength="254"
+                          class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
+                <p class="text-xs text-gray-500 mt-1 mb-2">Use {'{user}'} to mention the user.</p>
+            </div>
+            <div id="welcome-ai-prompt-div">
+                <label for="welcome-ai-prompt" class="block text-sm font-medium text-gray-300 mb-2">Welcome Message AI Prompt</label>
+                <p class="text-xs text-gray-500 mt-1 mb-2">Leave empty to have default prompt</p>
+                <textarea id="welcome-ai-prompt" name="welcome-ai-prompt" rows="3" maxlength="254"
+                          class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
+                <p class="text-xs text-gray-500 mt-1 mb-2">Give the AI an prompt to generate an Welcome Message</p>
+            </div>
+            <label for="welcome-channel" class="block text-sm font-medium text-gray-300 mb-2">Welcome Channel</label>
+            <select id="welcome-channel" name="welcome-channel"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                <option id="default-option">Select a channel</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+    <h2 class="text-xl font-bold mb-4 text-purple-400 border-b border-gray-700 pb-2">Role on Join</h2>
+    <div class="space-y-6">
+        <div id="welcome-join-config" class="transition-all duration-300 ease-in-out">
+            <div class="flex items-center justify-between mt-4">
+                <h3 class="block text-sm font-medium text-gray-300">Role on Join</h3>
+                <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="module-toggle" id="toggle-role"
+                           class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                           checked/>
+                    <label for="toggle-role"
+                           class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 mb-2 w-full">Enable Role on Join to give new Users an role.</p>
+            <div id="welcome-role-div">
+                <label for="welcome-role" class="block text-sm font-medium text-gray-300 mb-2">Role on Join</label>
+                <select id="welcome-role" name="welcome-role"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                    <option id="default-option-role">Select a role</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .toggle-checkbox:checked {
+        right: 0;
+        border-color: #68D391;
+    }
+
+    .toggle-checkbox:checked + .toggle-label {
+        background-color: #68D391;
+    }
+
+    .toggle-checkbox {
+        right: 50%;
+        transition: all 0.3s;
+    }
+</style>
+<script>
+
+    const aiToggle = document.getElementById("toggle-ai-messages") as HTMLInputElement;
+    const welcomeMessageDiv = document.getElementById("welcome-message-div") as HTMLDivElement;
+    const aiPromptDiv = document.getElementById("welcome-ai-prompt-div") as HTMLDivElement;
+    const roleOnJoinToggle = document.getElementById("toggle-role") as HTMLInputElement;
+    const roleSelectDiv = document.getElementById("welcome-role-div") as HTMLDivElement;
+
+    aiEnabledSwitch(aiToggle.checked);
+    roleOnJoin(roleOnJoinToggle.checked);
+
+    aiToggle.addEventListener("click", () => {
+        aiEnabledSwitch(aiToggle.checked);
+    });
+
+    roleOnJoinToggle.addEventListener("click", () => {
+        roleOnJoin(roleOnJoinToggle.checked);
+    })
+
+    function aiEnabledSwitch(enabled: boolean) {
+        if (enabled) {
+            welcomeMessageDiv.style = "display: none"
+            aiPromptDiv.style = "display: inherit"
+        } else {
+            welcomeMessageDiv.style = "display: inherit"
+            aiPromptDiv.style = "display: none"
+        }
+    }
+
+    function roleOnJoin(enabled: boolean) {
+        if (!enabled) {
+            roleSelectDiv.style = "display: none"
+        } else {
+            roleSelectDiv.style = "display: inherit"
+        }
+    }
+
+</script>

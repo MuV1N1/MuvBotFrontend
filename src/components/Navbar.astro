@@ -1,0 +1,31 @@
+<nav class="flex justify-between items-center px-8 py-4 bg-gray-900/50 backdrop-blur-md border-b border-gray-800">
+    <div class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+        MuvBot
+    </div>
+    <div class="flex items-center space-x-6">
+        <a href="/" class="text-gray-300 hover:text-white transition-colors duration-200">Home</a>
+        {
+            Astro.originPathname == "/dashboard/" ? null :
+                    <a href={"/dashboard/guilds/" + Astro.params.guildId}
+                       class="text-gray-300 hover:text-white transition-colors duration-200">Dashboard</a>
+        }
+        <button id="logout-btn" class="text-gray-300 hover:text-red-400 transition-colors duration-200">
+            Logout
+        </button>
+    </div>
+</nav>
+
+<script>
+    import {deleteCookie} from '../utils/auth';
+
+    const cleanLogout = () => {
+        deleteCookie('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+    };
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', cleanLogout);
+    }
+</script>

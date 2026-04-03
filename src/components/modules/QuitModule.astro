@@ -1,0 +1,37 @@
+<div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+    <h2 class="text-xl font-bold mb-4 text-purple-400 border-b border-gray-700 pb-2">Quit System</h2>
+    <div class="space-y-6">
+        <div id="quit-config" class="transition-all duration-300 ease-in-out">
+            <div id="quit-message-div">
+                <label for="quit-message" class="block text-sm font-medium text-gray-300 mb-2">Quit
+                    Message</label>
+                <textarea id="quit-message" name="quit-message" rows="3" maxlength="254"
+                          class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
+                <p class="text-xs text-gray-500 mt-1 mb-2">Use {'{user}'} to mention the user.</p>
+            </div>
+            <label for="quit-channel" class="block text-sm font-medium text-gray-300 mb-2">quit Channel</label>
+            <select id="quit-channel" name="quit-channel"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                <option id="default-option">Select a channel</option>
+            </select>
+        </div>
+    </div>
+</div>
+<style>
+    .toggle-checkbox:checked {
+        right: 0;
+        border-color: #68D391;
+    }
+    quit
+    .toggle-checkbox:checked + .toggle-label {
+        background-color: #68D391;
+    }
+
+    .toggle-checkbox {
+        right: 50%;
+        transition: all 0.3s;
+    }
+</style>
+<script>
+
+</script>

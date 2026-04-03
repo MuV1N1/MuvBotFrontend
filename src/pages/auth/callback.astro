@@ -1,0 +1,59 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Logging in...">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <h2 class="text-2xl font-bold mb-4">Authenticating...</h2>
+            <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+    </div>
+</Layout>
+
+<script>
+    import { setCookie } from '../../utils/auth';
+    import { apiBase } from '../../config/public';
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+        fetch(`${apiBase}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Login failed');
+            return res.json();
+        })
+        .then(data => {
+            if (data.token) {
+                const rememberMe = localStorage.getItem('remember_me') === 'true';
+
+                // Store token in cookie
+                // If remember_me is true, set for 60 days (2 months)
+                setCookie('access_token', data.token, rememberMe ? 60 : undefined);
+
+                // Store user info in localStorage (less critical)
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Clean up
+                localStorage.removeItem('remember_me');
+                localStorage.removeItem('access_token'); // Remove old token if any
+
+                window.location.href = '/dashboard';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Login failed! Check console.');
+            window.location.href = '/';
+        });
+    } else {
+        window.location.href = '/';
+    }
+</script>
