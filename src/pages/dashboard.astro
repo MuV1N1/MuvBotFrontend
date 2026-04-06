@@ -73,11 +73,11 @@ import Navbar from '../components/Navbar.astro';
                 </button>
                 <img src="${g.iconUrl || 'https://via.placeholder.com/128?text=No+Icon'}" alt="${g.name}" class="w-16 h-16 rounded-full mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 ${g.hidden ? 'opacity-50 grayscale' : ''}" />
                 <h3 class="text-lg font-semibold text-center mb-4 truncate w-full ${g.hidden ? 'text-gray-400' : ''}" title="${g.name}">${g.name}</h3>
-                <button class="${g.botInstalled 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'} px-4 py-2 rounded-lg font-medium transition-colors w-full">
-                    <a href="${g.botInstalled ? `/dashboard/guilds/${g.discordId}` : `https://discord.com/oauth2/authorize?client_id=${discordClientId}`}">${g.botInstalled ? 'Manage' : 'Invite Bot'}</a>
-                </button>
+                <a class="${g.botInstalled
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white text-center'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white text-center'} px-4 py-2 rounded-lg font-medium transition-colors w-full" href="${g.botInstalled ? `/dashboard/guilds/${g.discordId}` : `https://discord.com/oauth2/authorize?client_id=${discordClientId}`}">
+                        ${g.botInstalled ? 'Manage' : 'Invite Bot'}
+                    </a>
             </div>
         `;
     }

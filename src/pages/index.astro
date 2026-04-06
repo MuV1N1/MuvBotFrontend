@@ -1,8 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { discordClientId, siteOrigin } from '../config/public';
-const redirectUri = encodeURIComponent(`${siteOrigin}/auth/callback`);
-const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20guilds`;
+const botId = import.meta.env.DISCORD_CLIENT_ID;
+const url = `https://discord.com/api/oauth2/authorize?client_id=${botId}&redirect_uri=http://localhost:4321/auth/callback&response_type=code&scope=identify%20guilds`
 
 ---
 

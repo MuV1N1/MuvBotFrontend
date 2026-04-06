@@ -7,7 +7,14 @@
         "start": "astro dev",
         "build": "astro build",
         "preview": "astro preview",
-        "astro": "astro"
+        "astro": "astro",
+        "test": "playwright test",
+        "test:ui": "playwright test --ui",
+        "test:headed": "playwright test --headed",
+        "lint": "npm run lint:js && npm run lint:css",
+        "lint:js": "eslint . --ext .js,.mjs,.ts,.tsx,.astro",
+        "lint:css": "stylelint \"src/**/*.{css,astro}\"",
+        "lint:fix": "eslint . --ext .js,.mjs,.ts,.tsx,.astro --fix && stylelint \"src/**/*.{css,astro}\" --fix"
     },
     "dependencies": {
         "@astrojs/node": "^9.5.3",
@@ -15,8 +22,16 @@
     },
     "devDependencies": {
         "@astrojs/tailwind": "^6.0.2",
+        "@playwright/test": "^1.59.1",
+        "@typescript-eslint/parser": "^8.58.0",
+        "astro-eslint-parser": "^1.4.0",
         "autoprefixer": "^10.4.23",
+        "eslint": "^10.1.0",
+        "eslint-plugin-astro": "^1.6.0",
         "postcss": "^8.5.6",
+        "stylelint": "^17.6.0",
+        "stylelint-config-standard": "^40.0.0",
+        "stylelint-config-tailwindcss": "^1.0.1",
         "tailwindcss": "^3.4.1"
     }
 }
