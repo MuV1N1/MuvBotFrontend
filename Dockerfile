@@ -40,8 +40,8 @@ RUN npm install --omit=dev
 
 # Expose the port (Astro default is 4321, but we use 3000 here)
 ENV HOST=0.0.0.0
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=4321
+EXPOSE 4321
 
 # Start the server
 CMD ["node", "./dist/server/entry.mjs"]
