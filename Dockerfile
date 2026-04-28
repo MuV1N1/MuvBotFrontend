@@ -1,27 +1,47 @@
-# syntax=docker/dockerfile:1
+# Build Stage
+FROM node:20-alpine AS build
 
-FROM node:lts-alpine AS base
 WORKDIR /app
 
-FROM base AS deps
-COPY package*.json ./
-RUN npm ci
+# Accept build arguments for Astro PUBLIC_ variables
+ARG PUBLIC_API_URL
+ARG PUBLIC_SITE_ORIGIN
+ARG PUBLIC_DISCORD_CLIENT_ID
 
-FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
+# Set them as environment variables for the build process
+ENV PUBLIC_API_URL=$PUBLIC_API_URL
+ENV PUBLIC_SITE_ORIGIN=$PUBLIC_SITE_ORIGIN
+ENV PUBLIC_DISCORD_CLIENT_ID=$PUBLIC_DISCORD_CLIENT_ID
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy project files
 COPY . .
+
+# Build the project (Astro will inject PUBLIC_ variables into the client bundle here)
 RUN npm run build
 
-FROM node:lts-alpine AS runtime
-WORKDIR /app
-ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=4321
+# Runtime Stage
+FROM node:20-alpine AS runtime
 
-# Nur das Nötige aus dem Build übernehmen
+WORKDIR /app
+
+# Copy built files and package files
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/package-lock.json ./package-lock.json
 
-EXPOSE 4321
+# Install only production dependencies
+RUN npm install --omit=dev
 
-CMD ["node", "dist/server/entry.mjs"]
+# Expose the port (Astro default is 4321, but we use 3000 here)
+ENV HOST=0.0.0.0
+ENV PORT=3000
+EXPOSE 3000
+
+# Start the server
+CMD ["node", "./dist/server/entry.mjs"]

@@ -1,7 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
-const botId = import.meta.env.DISCORD_CLIENT_ID;
-const url = `https://discord.com/api/oauth2/authorize?client_id=${botId}&redirect_uri=http://localhost:4321/auth/callback&response_type=code&scope=identify%20guilds`
+import { discordClientId, siteOrigin } from '../config/public';
+
+const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${siteOrigin}/auth/callback&response_type=code&scope=identify%20guilds`
 
 ---
 

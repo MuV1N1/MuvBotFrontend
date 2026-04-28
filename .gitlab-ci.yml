@@ -1,0 +1,150 @@
+stages:
+  - build
+  - docker
+  - deploy
+  - cleanup
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  IMAGE_TAG_LATEST: $CI_REGISTRY_IMAGE:latest
+  APP_NAME: muvbot-frontend
+  APP_PORT: "3000"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REUSABLE ANCHORS
+# ─────────────────────────────────────────────────────────────────────────────
+.only_main: &only_main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+
+.docker_login: &docker_login
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE: build
+# ─────────────────────────────────────────────────────────────────────────────
+build:
+  stage: build
+  image: node:20-alpine
+  <<: *only_main
+  script:
+    - npm install
+    - npm run build
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE: docker
+# Builds the Docker image and passes CI/CD variables as build arguments.
+# ─────────────────────────────────────────────────────────────────────────────
+docker-build:
+  stage: docker
+  image: docker:26
+  services:
+    - docker:26-dind
+  <<: *docker_login
+  <<: *only_main
+  script:
+    - |
+      docker build \
+        --build-arg PUBLIC_API_URL="$PUBLIC_API_URL" \
+        --build-arg PUBLIC_SITE_ORIGIN="$PUBLIC_SITE_ORIGIN" \
+        --build-arg PUBLIC_DISCORD_CLIENT_ID="$PUBLIC_DISCORD_CLIENT_ID" \
+        -t "$IMAGE_TAG" \
+        -t "$IMAGE_TAG_LATEST" \
+        .
+    - docker push "$IMAGE_TAG"
+    - docker push "$IMAGE_TAG_LATEST"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE: deploy
+# ─────────────────────────────────────────────────────────────────────────────
+deploy:
+  stage: deploy
+  image: alpine:3.19
+  <<: *only_main
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh "$SERVER_USER@$SERVER_IP" /bin/bash << REMOTE
+        set -e
+
+        # ── Login & pull new image ────────────────────────────────────────────
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" \
+          --password-stdin "$CI_REGISTRY" 2>/dev/null || true
+        docker pull "$IMAGE_TAG"
+
+        # ── Stop & remove old container ───────────────────────────────────────
+        docker stop "$APP_NAME" 2>/dev/null || true
+        docker rm   "$APP_NAME"  2>/dev/null || true
+
+        # ── Start new container ───────────────────────────────────────────────
+        docker run -d \
+          --name "$APP_NAME" \
+          --network mynet \
+          --restart no \
+          -p "$APP_PORT:$APP_PORT" \
+          "$IMAGE_TAG"
+
+        # ── Health check (60s / 12 × 5s) ─────────────────────────────────────
+        echo "Health check starting (max 60s)..."
+        HEALTHY=false
+        for i in \$(seq 1 12); do
+          sleep 5
+          HTTP=\$(curl -s -o /dev/null -w "%{http_code}" \
+            "http://localhost:$APP_PORT/" 2>/dev/null || echo "000")
+          echo "  Attempt \$i/12 — HTTP \$HTTP"
+          if [ "\$HTTP" != "000" ] && [ "\$HTTP" != "502" ] && [ "\$HTTP" != "503" ]; then
+            HEALTHY=true
+            break
+          fi
+        done
+
+        if [ "\$HEALTHY" = "false" ]; then
+          echo "Health check FAILED — stopping broken container."
+          docker stop "$APP_NAME" 2>/dev/null || true
+          docker rm   "$APP_NAME"  2>/dev/null || true
+          exit 1
+        fi
+
+        docker update --restart unless-stopped "$APP_NAME"
+        echo "Health check passed! $APP_NAME is running on port $APP_PORT"
+      REMOTE
+  environment:
+    name: production
+    url: http://$SERVER_IP:$APP_PORT
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE: cleanup
+# ─────────────────────────────────────────────────────────────────────────────
+cleanup:
+  stage: cleanup
+  image: alpine:3.19
+  <<: *only_main
+  when: always
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh "$SERVER_USER@$SERVER_IP" /bin/bash << REMOTE
+        echo "Pruning unused Docker images..."
+        docker image prune -f
+        echo "Cleanup done"
+      REMOTE
