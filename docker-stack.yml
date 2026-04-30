@@ -1,0 +1,43 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# muvbot-frontend – Docker Swarm Stack
+# Deploy: docker stack deploy -c docker-stack.yml muvbot-frontend --with-registry-auth
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  frontend:
+    image: ${IMAGE_TAG:-registry.gitlab.com/your-group/muvbot-frontend:latest}
+    ports:
+      - "4321:4321"
+    networks:
+      - mynet
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4321/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+networks:
+  mynet:
+    external: true
