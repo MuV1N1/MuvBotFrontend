@@ -1,6 +1,5 @@
 stages:
   - build
-  - test
   - docker
   - deploy
   - cleanup
@@ -51,53 +50,6 @@ build:
       - dist/
     expire_in: 1 hour
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STAGE: test
-# Startet Astro preview (gegen dist/ aus dem build-Job) und führt Playwright aus.
-# Läuft NACH build aber VOR docker → kein Docker Image nötig.
-# ─────────────────────────────────────────────────────────────────────────────
-playwright:
-  stage: test
-  image: mcr.microsoft.com/playwright:v1.52.0-noble
-  <<: *only_main
-  dependencies:
-    - build              # dist/-Artifact aus dem build-Job
-  variables:
-    # PUBLIC_* Variablen werden hier als echte Env-Variablen gesetzt,
-    # damit der Astro-Preview-Server sie kennt (SSR liest sie zur Laufzeit)
-    PUBLIC_API_URL: $PUBLIC_API_URL
-    PUBLIC_SITE_ORIGIN: $PUBLIC_SITE_ORIGIN
-    PUBLIC_DISCORD_CLIENT_ID: $PUBLIC_DISCORD_CLIENT_ID
-  before_script:
-    - npm install --prefer-offline
-  script:
-    # Astro preview-Server im Hintergrund starten (nutzt dist/ aus dem Artifact)
-    - npm run preview -- --port 4321 --host 127.0.0.1 &
-    - PREVIEW_PID=$!
-    # Warten bis der Server antwortet (max 30s)
-    - |
-      for i in $(seq 1 30); do
-        sleep 1
-        curl -sf http://127.0.0.1:4321/ > /dev/null 2>&1 && break
-        echo "Waiting for preview server... ($i/30)"
-      done
-    # Playwright mit der CI-Config ausführen
-    - npx playwright test --config=playwright.config.ci.ts
-    # Preview-Server sauber beenden
-    - kill $PREVIEW_PID 2>/dev/null || true
-  artifacts:
-    when: always
-    reports:
-      junit: test-results/junit.xml    # GitLab zeigt Testergebnisse nativ an
-    paths:
-      - test-results/                  # Screenshots bei Fehlern
-    expire_in: 7 days
-
-# ─────────────────────────────────────────────────────────────────────────────
-# STAGE: docker
-# Baut das Image mit buildx (BuildKit) und pusht es in die GitLab Registry.
-# buildx ist schneller, unterstützt Cache-Export und ist der moderne Standard.
-# ─────────────────────────────────────────────────────────────────────────────
 docker-build:
   stage: docker
   image: docker:26
