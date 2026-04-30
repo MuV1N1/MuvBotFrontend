@@ -84,6 +84,8 @@ deploy:
   <<: *only_main
   <<: *ssh_setup
   script:
+    # Verzeichnis auf dem Server anlegen falls es nicht existiert
+    - ssh "$SERVER_USER@$SERVER_IP" "mkdir -p /opt/stacks/frontend"
     # docker-stack.yml auf den Server kopieren
     - scp docker-stack.yml "$SERVER_USER@$SERVER_IP:/opt/stacks/frontend/docker-stack.yml"
     - |
@@ -102,9 +104,8 @@ deploy:
             --with-registry-auth \
             --prune
 
-        # Warten bis der Rolling Update abgeschlossen ist
-        echo "Waiting for service update to complete..."
-        docker service update --force --update-order start-first "$STACK_NAME"_frontend 2>/dev/null || true
+        docker service update --force --image "$IMAGE_TAG" ${STACK_NAME}_frontend
+
         docker service ls --filter "name=$STACK_NAME"
 
         # Health-Check: Service muss RUNNING sein
