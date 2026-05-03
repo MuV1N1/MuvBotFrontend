@@ -64,8 +64,7 @@ docker-build:
       docker buildx build \
         --push \
         --platform linux/amd64 \
-        --cache-from type=registry,ref="$IMAGE_TAG_LATEST" \
-        --cache-to   type=inline \
+        --no-cache \
         --build-arg PUBLIC_API_URL="$PUBLIC_API_URL" \
         --build-arg PUBLIC_SITE_ORIGIN="$PUBLIC_SITE_ORIGIN" \
         --build-arg PUBLIC_DISCORD_CLIENT_ID="$PUBLIC_DISCORD_CLIENT_ID" \
