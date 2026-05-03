@@ -107,7 +107,6 @@ deploy:
             --with-registry-auth \
             --prune
 
-        docker service update --force --image "$IMAGE_TAG" ${STACK_NAME}_frontend
 
         docker service ls --filter "name=$STACK_NAME"
 
