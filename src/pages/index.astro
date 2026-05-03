@@ -2,10 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { discordClientId, siteOrigin } from '../config/public';
 
-console.log('siteOrigin:', siteOrigin);
-
 const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${siteOrigin}/auth/callback&response_type=code&scope=identify%20guilds`
-console.log('url: ', url);
 ---
 
 <Layout title="MuvBot - The Best Discord Bot">

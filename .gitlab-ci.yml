@@ -104,7 +104,11 @@ deploy:
             -c /opt/stacks/frontend/docker-stack.yml \
             "$STACK_NAME" \
             --with-registry-auth \
-            --prune
+            --prune \
+            --force
+
+        # Force Update um sicherzustellen dass neues Image gepullt wird
+        docker service update --force ${STACK_NAME}_frontend
 
 
         docker service ls --filter "name=$STACK_NAME"
