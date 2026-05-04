@@ -34,18 +34,14 @@ import Layout from '../../layouts/Layout.astro';
             if (data.token) {
                 const rememberMe = localStorage.getItem('remember_me') === 'true';
 
-                // Store token in cookie
-                // If remember_me is true, set for 60 days (2 months)
                 setCookie('access_token', data.token, rememberMe ? 60 : undefined);
-
-                // Store user info in localStorage (less critical)
                 localStorage.setItem('user', JSON.stringify(data.user));
-                
-                // Clean up
                 localStorage.removeItem('remember_me');
-                localStorage.removeItem('access_token'); // Remove old token if any
+                localStorage.removeItem('access_token');
 
                 window.location.href = '/dashboard';
+            } else {
+                throw new Error(`No token in response: ${JSON.stringify(data)}`);
             }
         })
         .catch(err => {
