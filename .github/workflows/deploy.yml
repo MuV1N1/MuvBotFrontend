@@ -1,4 +1,4 @@
-name: Backend Build & Deploy
+name: Frontend Build & Deploy
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  STACK_NAME: muvbot-backend
+  STACK_NAME: muvbot-frontend
 
 jobs:
   build-and-push:
@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set image tag
+      - name: Set image tag (LOWERCASE FIX)
         id: meta
         run: |
           echo "tag=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> $GITHUB_OUTPUT
@@ -53,6 +53,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 🔥 FIX: Repo wird im Deploy Job geladen
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -60,17 +64,17 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts
 
-      - name: Create backend directory
+      - name: Create frontend directory
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} \
-            "mkdir -p /opt/stacks/backend"
+            "mkdir -p /opt/stacks/frontend"
 
       - name: Upload stack file
         run: |
-          scp docker-stack.yml \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/opt/stacks/backend/docker-stack.yml
+          scp ./docker-stack.yml \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/opt/stacks/frontend/docker-stack.yml
 
-      - name: Deploy backend stack
+      - name: Deploy frontend stack
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
@@ -80,14 +84,14 @@ jobs:
               --password-stdin
 
             docker stack deploy \
-              -c /opt/stacks/backend/docker-stack.yml \
+              -c /opt/stacks/frontend/docker-stack.yml \
               ${{ env.STACK_NAME }} \
               --with-registry-auth \
               --prune
 
             docker service ls
 
-            echo "Backend deployed successfully!"
+            echo "Frontend deployed successfully!"
           EOF
 
   cleanup:
