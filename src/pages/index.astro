@@ -1,14 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { discordClientId, siteOrigin } from '../config/public';
-
 const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${siteOrigin}/auth/callback&response_type=code&scope=identify%20guilds`
 ---
 
 <Layout title="MuvBot - The Best Discord Bot">
 	<main class="flex flex-col items-center justify-center min-h-[80vh] px-4">
 		<h1 class="text-6xl font-extrabold text-center mb-8">
-            Welcome to <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">TEST</span>
+            Welcome to <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">MuvBot</span>
         </h1>
 		
         <div class="max-w-2xl text-center mb-10 p-8 rounded-xl bg-gray-800/50 border border-purple-500/20 backdrop-blur-sm">
