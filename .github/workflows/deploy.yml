@@ -44,6 +44,9 @@ jobs:
             --push \
             --platform linux/amd64 \
             --no-cache \
+            --build-arg PUBLIC_API_URL="${{ secrets.PUBLIC_API_URL }}" \
+            --build-arg PUBLIC_SITE_ORIGIN="${{ secrets.PUBLIC_SITE_ORIGIN }}" \
+            --build-arg PUBLIC_DISCORD_CLIENT_ID="${{ secrets.PUBLIC_DISCORD_CLIENT_ID }}" \
             -t ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} \
             -t ghcr.io/${GITHUB_REPOSITORY,,}:latest \
             .
