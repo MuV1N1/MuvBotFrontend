@@ -77,17 +77,17 @@ jobs:
       - name: Deploy frontend stack
         env:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} \
             IMAGE_TAG="${IMAGE_TAG}" \
-            GITHUB_TOKEN="${GITHUB_TOKEN}" \
+            GHCR_TOKEN="${GHCR_TOKEN}" \
             GITHUB_ACTOR="${GITHUB_ACTOR}" \
             bash << 'EOF'
             set -e
 
-            echo "${GITHUB_TOKEN}" | docker login ghcr.io \
+            echo "${GHCR_TOKEN}" | docker login ghcr.io \
               -u "${GITHUB_ACTOR}" \
               --password-stdin
 
