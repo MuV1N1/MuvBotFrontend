@@ -7,7 +7,7 @@ version: "3.9"
 
 services:
   frontend:
-    image: ${IMAGE_TAG:-registry.gitlab.com/your-group/muvbot-frontend:latest}
+    image: ${IMAGE_TAG:-ghcr.io/muv1n1/muvbotfrontend:latest}
     ports:
       - "4321:4321"
     networks:

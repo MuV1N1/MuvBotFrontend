@@ -75,15 +75,23 @@ jobs:
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/opt/stacks/frontend/docker-stack.yml
 
       - name: Deploy frontend stack
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} \
+            IMAGE_TAG="${IMAGE_TAG}" \
+            GITHUB_TOKEN="${GITHUB_TOKEN}" \
+            GITHUB_ACTOR="${GITHUB_ACTOR}" \
+            bash << 'EOF'
             set -e
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u "${{ github.actor }}" \
+            echo "${GITHUB_TOKEN}" | docker login ghcr.io \
+              -u "${GITHUB_ACTOR}" \
               --password-stdin
 
-            docker stack deploy \
+            IMAGE_TAG="${IMAGE_TAG}" docker stack deploy \
               -c /opt/stacks/frontend/docker-stack.yml \
               ${{ env.STACK_NAME }} \
               --with-registry-auth \
@@ -91,7 +99,7 @@ jobs:
 
             docker service ls
 
-            echo "Frontend deployed successfully!"
+            echo "Frontend deployed successfully with image: ${IMAGE_TAG}"
           EOF
 
   cleanup:
