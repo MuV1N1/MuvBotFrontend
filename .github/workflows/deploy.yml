@@ -91,6 +91,8 @@ jobs:
               -u "${GITHUB_ACTOR}" \
               --password-stdin
 
+            docker pull "${IMAGE_TAG}"
+
             IMAGE_TAG="${IMAGE_TAG}" docker stack deploy \
               -c /opt/stacks/frontend/docker-stack.yml \
               ${{ env.STACK_NAME }} \
