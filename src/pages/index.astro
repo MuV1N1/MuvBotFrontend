@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { discordClientId, siteOrigin } from '../config/public';
+import { discordClientId, siteOrigin, apiBase } from '../config/public';
 const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${siteOrigin}/auth/callback&response_type=code&scope=identify%20guilds`
 ---
 
@@ -18,8 +18,12 @@ const url = `https://discord.com/api/oauth2/authorize?client_id=${discordClientI
                 <strong>Get Started:</strong> Login with Discord to manage your servers, configure moderation, and more.
             </p>
 		</div>
-        <p>DiscordId {discordClientId}</p>
-        <p>Redirect {url}</p>
+        <div class="text-xs text-gray-500 mt-4 text-left space-y-1">
+            <p>PUBLIC_DISCORD_CLIENT_ID: {discordClientId || '❌ NOT SET'}</p>
+            <p>PUBLIC_SITE_ORIGIN: {siteOrigin || '❌ NOT SET'}</p>
+            <p>PUBLIC_API_URL: {apiBase || '❌ NOT SET'}</p>
+            <p>OAuth URL: {url}</p>
+        </div>
         <div class="flex flex-col items-center">
             <label class="flex items-center space-x-3 mb-6 cursor-pointer group">
                 <div class="relative">
