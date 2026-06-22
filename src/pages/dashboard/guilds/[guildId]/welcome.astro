@@ -2,86 +2,156 @@
 import Layout from '../../../../layouts/Layout.astro';
 import Navbar from '../../../../components/Navbar.astro';
 import WelcomeModule from '../../../../components/modules/WelcomeModule.astro';
-import { apiBase } from '../../../../config/public';
 
-const token = Astro.cookies.get('access_token')?.value;
-if (!token) return Astro.redirect('/');
-
-const { guildId } = Astro.params;
-
-const [setRes, channelRes, roleRes] = await Promise.all([
-    fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers: { 'Authorization': `Bearer ${token}` } }),
-    fetch(`${apiBase}/api/guilds/${guildId}/channels`, { headers: { 'Authorization': `Bearer ${token}` } }),
-    fetch(`${apiBase}/api/guilds/${guildId}/roles`, { headers: { 'Authorization': `Bearer ${token}` } }),
-]);
-if (setRes.status === 401) return Astro.redirect('/');
-
-const settings = await setRes.json();
-const channels = await channelRes.json();
-const roles = await roleRes.json();
+export const prerender = false;
+const {guildId} = Astro.params;
 ---
 
 <Layout title="Welcome Settings">
-    <Navbar />
+    <Navbar/>
     <main id="guild-welcome-main" data-guild-id={guildId} class="container mx-auto px-4 py-8 max-w-4xl">
         <a href={`/dashboard/guilds/${guildId}`} class="text-gray-400 hover:text-white mb-6 inline-flex items-center">
             &larr; Back to Modules
         </a>
+
         <h1 class="text-3xl font-bold text-white mb-8">Welcome Settings</h1>
-        <form id="settings-form" class="space-y-6">
-            <WelcomeModule settings={settings.welcome} channels={channels} roles={roles} />
-            <div class="flex justify-end pt-4">
-                <button type="submit" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg">
-                    Save Changes
-                </button>
-            </div>
-        </form>
+
+        <div id="loading" class="text-center text-gray-400">Loading...</div>
+
+        <div id="content" class="hidden">
+            <form id="settings-form" class="space-y-6">
+                <!-- Reuse Component -->
+                <WelcomeModule/>
+
+                <div class="flex justify-end pt-4">
+                    <button type="submit"
+                            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
     </main>
-    <script type="application/json" id="settings-data" set:html={JSON.stringify(settings)} />
-    <script type="application/json" id="channels-data" set:html={JSON.stringify(channels)} />
-    <script type="application/json" id="roles-data" set:html={JSON.stringify(roles)} />
 </Layout>
 
 <script>
     import { getCookie } from '../../../../utils/auth';
     import { apiBase } from '../../../../config/public';
-
     const token = getCookie('access_token');
-    const guildId = document.getElementById('guild-welcome-main')!.dataset.guildId!;
-    const settings = JSON.parse(document.getElementById('settings-data')!.textContent!);
-    const channels = JSON.parse(document.getElementById('channels-data')!.textContent!);
-    const roles = JSON.parse(document.getElementById('roles-data')!.textContent!);
-    const form = document.getElementById('settings-form') as HTMLFormElement;
-    const aiToggle = document.getElementById('toggle-ai-messages') as HTMLInputElement;
-    const roleOnJoinToggle = document.getElementById('toggle-role') as HTMLInputElement;
+    const guildId = document.getElementById('guild-welcome-main').dataset.guildId;
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(form);
-        settings.welcome.message = formData.get('welcome-message') as string;
-        settings.welcome.aiEnabled = aiToggle.checked;
-        settings.welcome.aiPrompt = formData.get('welcome-ai-prompt') as string;
-        settings.welcome.roleOnJoinEnabled = roleOnJoinToggle.checked;
+    if (!token) window.location.href = '/';
 
-        const selectedChannelId = formData.get('welcome-channel') as string;
-        if (selectedChannelId && selectedChannelId !== 'Select a channel') {
-            settings.welcome.channelId = selectedChannelId;
-            const ch = channels.find((c: any) => c.id === selectedChannelId);
-            if (ch) settings.welcome.channelName = ch.name;
+    async function init() {
+        try {
+            // Fetch Settings
+            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+
+            const channelRes = await fetch(`${apiBase}/api/guilds/${guildId}/channels`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+
+            const roleRes = await  fetch(`${apiBase}/api/guilds/${guildId}/roles`, {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+
+            const settings = await setRes.json();
+            const channels = await channelRes.json();
+            const roles = await  roleRes.json();
+
+            // Populate
+            const form = document.getElementById('settings-form') as HTMLFormElement;
+            form.querySelector('[name="welcome-message"]').value = settings.welcome.message || '';
+            form.querySelector('[name="welcome-ai-prompt"]').value = settings.welcome.aiPrompt || '';
+
+
+            const channelSelect = document.getElementById('welcome-channel');
+            const roleSelect = document.getElementById("welcome-role");
+
+            const aiToggle = document.getElementById('toggle-ai-messages') as HTMLInputElement;
+            const roleOnJoinToggle = document.getElementById('toggle-role') as HTMLInputElement;
+
+            if(settings.welcome.channelId === ""){
+                const defaultOptionElm = document.getElementById("default-option") as HTMLOptionElement;
+                defaultOptionElm.selected = true;
+            }
+            if (settings.welcome.roleOnJoinEnabled === ""){
+                const defaultOptionElm = document.getElementById("default-option-role") as HTMLOptionElement;
+                defaultOptionElm.selected = true;
+            }
+
+            channels.forEach(channel => {
+                const option = document.createElement("option");
+                option.id = channel.id;
+                option.value = channel.id;
+                option.textContent = channel.name
+                option.selected = channel.id === settings.welcome.channelId
+                channelSelect.append(option)
+            });
+
+            roles.forEach(role => {
+                const option = document.createElement("option");
+                option.id = role.id;
+                option.value = role.id;
+                option.textContent = role.name
+                option.selected = role.id === settings.welcome.roleOnJoinId
+                roleSelect.append(option)
+            })
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+
+            // Save
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                
+                settings.welcome.message = formData.get('welcome-message');
+                const selectedChannelId = formData.get('welcome-channel');
+                const selectedRoleId = formData.get('welcome-role')
+
+                settings.welcome.aiEnabled = aiToggle.checked;
+                settings.welcome.aiPrompt = formData.get("welcome-ai-prompt")
+
+                console.log(settings.welcome.aiPrompt)
+
+                settings.welcome.roleOnJoinEnabled = roleOnJoinToggle.checked;
+
+                if(selectedChannelId && selectedChannelId !== "Select a channel") {
+                    settings.welcome.channelId = selectedChannelId;
+                    const selectedChannel = channels.find(c => c.id === selectedChannelId);
+                    if (selectedChannel) {
+                        settings.welcome.channelName = selectedChannel.name;
+                    }
+                }
+                if(selectedRoleId && selectedRoleId !== "Select a role") {
+                    settings.welcome.roleOnJoinId = selectedRoleId;
+                    const selectedRole = roles.find(r => r.id === selectedRoleId);
+                    if (selectedRoleId) {
+                        settings.welcome.roleOnJoinName = selectedRole.name;
+                    }
+                }
+
+
+                const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                if (res.ok) alert('Saved!');
+                else alert('Error saving.');
+            };
+
+        } catch (e) {
+            console.error(e);
+            window.location.href = `/dashboard/guilds/${guildId}`;
         }
-        const selectedRoleId = formData.get('welcome-role') as string;
-        if (selectedRoleId && selectedRoleId !== 'Select a role') {
-            settings.welcome.roleOnJoinId = selectedRoleId;
-            const r = roles.find((r: any) => r.id === selectedRoleId);
-            if (r) settings.welcome.roleOnJoinName = r.name;
-        }
-
-        const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-        if (res.ok) alert('Saved!');
-        else alert('Error saving.');
-    });
+    }
+    init();
 </script>

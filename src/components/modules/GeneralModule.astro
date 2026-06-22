@@ -1,13 +1,9 @@
----
-interface Props { commandPrefix: string; }
-const { commandPrefix } = Astro.props;
----
 <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
     <h2 class="text-xl font-bold mb-4 text-purple-400 border-b border-gray-700 pb-2">General</h2>
     <div class="grid grid-cols-1 gap-6">
         <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">Command Prefix</label>
-            <input type="text" name="commandPrefix" value={commandPrefix} class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none" />
+            <input type="text" name="commandPrefix" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none" />
         </div>
     </div>
 </div>
