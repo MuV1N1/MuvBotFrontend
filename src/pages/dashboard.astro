@@ -1,30 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
-import { apiBase, discordClientId } from '../config/public';
-
-const token = Astro.cookies.get('access_token')?.value;
-if (!token) return Astro.redirect('/');
-
-let guilds: any[] = [];
-try {
-    const res = await fetch(`${apiBase}/api/guilds`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (res.status === 401) return Astro.redirect('/');
-    const data = await res.json();
-    guilds = Array.isArray(data) ? data : [];
-} catch {
-    guilds = [];
-}
-
-const visibleGuilds = guilds.filter((g: any) => !g.hidden);
-const hiddenGuilds = guilds.filter((g: any) => g.hidden);
 ---
 
 <Layout title="Dashboard - MuvBot">
     <Navbar />
-    <main class="container mx-auto px-4 py-8">
+	<main class="container mx-auto px-4 py-8">
         <div id="welcome-popup" class="fixed bottom-4 right-4 bg-indigo-600 text-white px-6 py-4 rounded-lg shadow-2xl transform transition-all duration-500 translate-y-20 opacity-0 z-50 pointer-events-none">
             <div class="flex items-center gap-3">
                 <span class="text-2xl">👋</span>
@@ -34,93 +15,143 @@ const hiddenGuilds = guilds.filter((g: any) => g.hidden);
                 </div>
             </div>
         </div>
-
-        <h1 class="text-3xl font-bold mb-8 text-center md:text-left">Your Servers</h1>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {visibleGuilds.length === 0
-                ? <div class="col-span-full text-center text-gray-500">No visible servers found.</div>
-                : visibleGuilds.map((g: any) => (
-                    <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center hover:bg-gray-750 transition-colors border border-gray-700 hover:border-purple-500/50 group relative">
-                        <button
-                            class="toggle-visibility-btn absolute top-4 right-4 text-gray-500 hover:text-white transition-colors cursor-pointer z-10"
-                            data-guild-id={g.discordId}
-                            data-hidden="false"
-                            title="Hide"
-                        >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                        </button>
-                        <img src={g.iconUrl || 'https://via.placeholder.com/128?text=No+Icon'} alt={g.name} class="w-16 h-16 rounded-full mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300" />
-                        <h3 class="text-lg font-semibold text-center mb-4 truncate w-full" title={g.name}>{g.name}</h3>
-                        <a class={`${g.botInstalled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-indigo-600 hover:bg-indigo-500'} text-white text-center px-4 py-2 rounded-lg font-medium transition-colors w-full`}
-                           href={g.botInstalled ? `/dashboard/guilds/${g.discordId}` : `https://discord.com/oauth2/authorize?client_id=${discordClientId}`}>
-                            {g.botInstalled ? 'Manage' : 'Invite Bot'}
-                        </a>
-                    </div>
-                ))
-            }
+        
+		<h1 class="text-3xl font-bold mb-8 text-center md:text-left">Your Servers</h1>
+        
+        <div id="guild-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="col-span-full text-center text-gray-400 animate-pulse">Loading servers...</div>
         </div>
 
-        {hiddenGuilds.length > 0 && (
-            <>
-                <h2 class="text-2xl font-bold mb-6 mt-12 text-center md:text-left">Hidden Servers</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {hiddenGuilds.map((g: any) => (
-                        <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center hover:bg-gray-750 transition-colors border border-gray-700 hover:border-purple-500/50 group relative">
-                            <button
-                                class="toggle-visibility-btn absolute top-4 right-4 text-gray-500 hover:text-white transition-colors cursor-pointer z-10"
-                                data-guild-id={g.discordId}
-                                data-hidden="true"
-                                title="Unhide"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                                </svg>
-                            </button>
-                            <img src={g.iconUrl || 'https://via.placeholder.com/128?text=No+Icon'} alt={g.name} class="w-16 h-16 rounded-full mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 opacity-50 grayscale" />
-                            <h3 class="text-lg font-semibold text-center mb-4 truncate w-full text-gray-400" title={g.name}>{g.name}</h3>
-                            <a class={`${g.botInstalled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-indigo-600 hover:bg-indigo-500'} text-white text-center px-4 py-2 rounded-lg font-medium transition-colors w-full`}
-                               href={g.botInstalled ? `/dashboard/guilds/${g.discordId}` : `https://discord.com/oauth2/authorize?client_id=${discordClientId}`}>
-                                {g.botInstalled ? 'Manage' : 'Invite Bot'}
-                            </a>
-                        </div>
-                    ))}
-                </div>
-            </>
-        )}
-    </main>
+        <h2 id="hidden-servers-title" class="text-2xl font-bold mb-6 mt-12 text-center md:text-left hidden">Hidden Servers</h2>
+        <div id="hidden-guild-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden">
+        </div>
+	</main>
+    
 </Layout>
 
 <script>
     import { getCookie } from '../utils/auth';
-    import { apiBase } from '../config/public';
+    import { apiBase, discordClientId } from '../config/public';
 
-    const token = getCookie('access_token');
+    window.allGuilds = [];
 
-    document.querySelectorAll<HTMLButtonElement>('.toggle-visibility-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const guildId = btn.dataset.guildId!;
-            const isHidden = btn.dataset.hidden === 'true';
-            const method = isHidden ? 'DELETE' : 'POST';
-            try {
-                const res = await fetch(`${apiBase}/api/users/hide/${guildId}`, {
-                    method,
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) window.location.reload();
-                else console.error('Failed to toggle visibility', res.status);
-            } catch (e) {
-                console.error(e);
+    window.renderGuilds = function() {
+        const visibleGuilds = window.allGuilds.filter(g => !g.hidden);
+        const hiddenGuilds = window.allGuilds.filter(g => g.hidden);
+
+        const list = document.getElementById('guild-list');
+        const hiddenList = document.getElementById('hidden-guild-list');
+        const hiddenTitle = document.getElementById('hidden-servers-title');
+
+        if (visibleGuilds.length === 0) {
+             list.innerHTML = '<div class="col-span-full text-center text-gray-500">No visible servers found.</div>';
+        } else {
+             list.innerHTML = visibleGuilds.map(g => createCard(g)).join('');
+        }
+
+        if (hiddenGuilds.length > 0) {
+            hiddenTitle.classList.remove('hidden');
+            hiddenList.classList.remove('hidden');
+            hiddenList.innerHTML = hiddenGuilds.map(g => createCard(g)).join('');
+        } else {
+            hiddenTitle.classList.add('hidden');
+            hiddenList.classList.add('hidden');
+            hiddenList.innerHTML = '';
+        }
+    }
+
+    function createCard(g) {
+        return `
+            <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center hover:bg-gray-750 transition-colors border border-gray-700 hover:border-purple-500/50 group relative">
+                <button onclick="toggleGuildVisibility('${g.discordId}', ${g.hidden})" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors cursor-pointer z-10" title="${g.hidden ? 'Unhide' : 'Hide'}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        ${g.hidden 
+                            ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>'
+                            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>'
+                        }
+                    </svg>
+                </button>
+                <img src="${g.iconUrl || 'https://via.placeholder.com/128?text=No+Icon'}" alt="${g.name}" class="w-16 h-16 rounded-full mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 ${g.hidden ? 'opacity-50 grayscale' : ''}" />
+                <h3 class="text-lg font-semibold text-center mb-4 truncate w-full ${g.hidden ? 'text-gray-400' : ''}" title="${g.name}">${g.name}</h3>
+                <a class="${g.botInstalled
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white text-center'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white text-center'} px-4 py-2 rounded-lg font-medium transition-colors w-full" href="${g.botInstalled ? `/dashboard/guilds/${g.discordId}` : `https://discord.com/oauth2/authorize?client_id=${discordClientId}`}">
+                        ${g.botInstalled ? 'Manage' : 'Invite Bot'}
+                    </a>
+            </div>
+        `;
+    }
+
+    window.toggleGuildVisibility = async function(guildId, isHidden) {
+        const token = getCookie('access_token');
+        if (!token) return;
+
+        const method = isHidden ? 'DELETE' : 'POST';
+        try {
+            const response = await fetch(`${apiBase}/api/users/hide/${guildId}`, {
+                method: method,
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const guild = window.allGuilds.find(g => g.discordId === guildId);
+                if (guild) {
+                    guild.hidden = !isHidden;
+                    window.renderGuilds();
+                }
+            } else {
+                console.error("Failed to toggle visibility", response.status);
             }
-        });
-    });
+        } catch(e) {
+            console.error(e);
+        }
+    }
 
+    async function loadGuilds() {
+        const token = getCookie('access_token'); 
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiBase}/api/guilds`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/';
+                return;
+            }
+
+            window.allGuilds = await response.json();
+            
+            if (!Array.isArray(window.allGuilds)) {
+                window.allGuilds = [];
+            }
+            
+            window.renderGuilds();
+
+        } catch (e) {
+            console.error(e);
+            document.getElementById('guild-list').innerHTML = '<div class="col-span-full text-center text-red-400">Error loading servers.</div>';
+        }
+    }
+    
+    loadGuilds();
+
+    // Welcome Popup Logic
     const popup = document.getElementById('welcome-popup');
     if (popup) {
-        setTimeout(() => popup.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none'), 500);
-        setTimeout(() => popup.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none'), 10500);
+        // Show popup
+        setTimeout(() => {
+            popup.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+        }, 500);
+
+        // Hide popup after 10 seconds
+        setTimeout(() => {
+            popup.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+        }, 10500); // 10s + 0.5s initial delay
     }
 </script>
