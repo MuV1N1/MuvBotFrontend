@@ -14,24 +14,35 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 mb-2 w-full">Enable AI messages to welcome new members.</p>
             <div id="welcome-message-div">
-                <label for="welcome-message" class="block text-sm font-medium text-gray-300 mb-2">Welcome
-                    Message</label>
+                <label for="welcome-message" class="block text-sm font-medium text-gray-300 mb-2">Welcome Message</label>
                 <textarea id="welcome-message" name="welcome-message" rows="3" maxlength="254"
                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
                 <p class="text-xs text-gray-500 mt-1 mb-2">Use {'{user}'} to mention the user.</p>
             </div>
             <div id="welcome-ai-prompt-div">
                 <label for="welcome-ai-prompt" class="block text-sm font-medium text-gray-300 mb-2">Welcome Message AI Prompt</label>
-                <p class="text-xs text-gray-500 mt-1 mb-2">Leave empty to have default prompt<br />Give the AI an prompt to generate an Welcome Message</p>
+                <p class="text-xs text-gray-500 mt-1 mb-2">Leave empty to have default prompt<br />Give the AI a prompt to generate a Welcome Message</p>
                 <textarea id="welcome-ai-prompt" name="welcome-ai-prompt" rows="3" maxlength="254"
                           class="w-full mb-4 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
-
             </div>
-            <label for="welcome-channel" class="block text-sm font-medium text-gray-300 mb-2">Welcome Channel</label>
-            <select id="welcome-channel" name="welcome-channel"
-                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
-                <option id="default-option">Select a channel</option>
-            </select>
+
+            <!-- Welcome Channels (multi) -->
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Welcome Channels</label>
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[28px]" id="welcome-channel-badges">
+                    <span id="welcome-channel-empty" class="text-xs text-gray-500 italic">No channels selected</span>
+                </div>
+                <div class="flex gap-2">
+                    <select id="welcome-channel" name="welcome-channel"
+                            class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                        <option value="">Select a channel...</option>
+                    </select>
+                    <button type="button" id="welcome-channel-add-btn"
+                            class="shrink-0 px-4 py-2 text-sm bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors">
+                        Add
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -50,67 +61,150 @@
                            class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
                 </div>
             </div>
-            <p class="text-xs text-gray-500 mt-1 mb-2 w-full">Enable Role on Join to give new Users an role.</p>
+            <p class="text-xs text-gray-500 mt-1 mb-2 w-full">Assign one or more roles when a user joins.</p>
+
+            <!-- Roles on Join (multi) -->
             <div id="welcome-role-div">
-                <label for="welcome-role" class="block text-sm font-medium text-gray-300 mb-2">Role on Join</label>
-                <select id="welcome-role" name="welcome-role"
-                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
-                    <option id="default-option-role">Select a role</option>
-                </select>
+                <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Roles on Join</label>
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[28px]" id="welcome-role-badges">
+                    <span id="welcome-role-empty" class="text-xs text-gray-500 italic">No roles selected</span>
+                </div>
+                <div class="flex gap-2">
+                    <select id="welcome-role" name="welcome-role"
+                            class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                        <option value="">Select a role...</option>
+                    </select>
+                    <button type="button" id="welcome-role-add-btn"
+                            class="shrink-0 px-4 py-2 text-sm bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors">
+                        Add
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 <style>
     .toggle-checkbox:checked {
         right: 0;
         border-color: #68D391;
     }
-
     .toggle-checkbox:checked + .toggle-label {
         background-color: #68D391;
     }
-
     .toggle-checkbox {
         right: 50%;
         transition: all 0.3s;
     }
 </style>
-<script>
 
+<script>
     const aiToggle = document.getElementById("toggle-ai-messages") as HTMLInputElement;
     const welcomeMessageDiv = document.getElementById("welcome-message-div") as HTMLDivElement;
     const aiPromptDiv = document.getElementById("welcome-ai-prompt-div") as HTMLDivElement;
     const roleOnJoinToggle = document.getElementById("toggle-role") as HTMLInputElement;
     const roleSelectDiv = document.getElementById("welcome-role-div") as HTMLDivElement;
 
-    aiEnabledSwitch(aiToggle.checked);
-    roleOnJoin(roleOnJoinToggle.checked);
-
     aiToggle.addEventListener("click", () => {
-        aiEnabledSwitch(aiToggle.checked);
+        welcomeMessageDiv.style.display = aiToggle.checked ? "none" : "";
+        aiPromptDiv.style.display = aiToggle.checked ? "" : "none";
+    });
+    roleOnJoinToggle.addEventListener("click", () => {
+        roleSelectDiv.style.display = roleOnJoinToggle.checked ? "" : "none";
     });
 
-    roleOnJoinToggle.addEventListener("click", () => {
-        roleOnJoin(roleOnJoinToggle.checked);
-    })
-
-    function aiEnabledSwitch(enabled: boolean) {
-        if (enabled) {
-            welcomeMessageDiv.style = "display: none"
-            aiPromptDiv.style = "display: inherit"
-        } else {
-            welcomeMessageDiv.style = "display: inherit"
-            aiPromptDiv.style = "display: none"
-        }
+    function makeBadge(label: string, onRemove: () => void): HTMLSpanElement {
+        const badge = document.createElement('span');
+        badge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-900/60 text-indigo-300 border border-indigo-700/50';
+        badge.innerHTML = `${label}<button type="button" class="hover:text-red-400 transition-colors ml-1">&times;</button>`;
+        (badge.querySelector('button') as HTMLButtonElement).addEventListener('click', onRemove);
+        return badge;
     }
 
-    function roleOnJoin(enabled: boolean) {
-        if (!enabled) {
-            roleSelectDiv.style = "display: none"
-        } else {
-            roleSelectDiv.style = "display: inherit"
+    function makeMultiSelect(
+        selectEl: HTMLSelectElement,
+        addBtn: HTMLButtonElement,
+        badgesDiv: HTMLElement,
+        emptySpan: HTMLElement
+    ) {
+        const selected = new Map<string, HTMLSpanElement>();
+
+        function refreshEmpty() {
+            emptySpan.classList.toggle('hidden', selected.size > 0);
         }
+
+        function add(id: string, label: string) {
+            if (!id || selected.has(id)) return;
+            const badge = makeBadge(label, () => {
+                badge.remove();
+                selected.delete(id);
+                refreshEmpty();
+            });
+            selected.set(id, badge);
+            badgesDiv.appendChild(badge);
+            refreshEmpty();
+        }
+
+        addBtn.addEventListener('click', () => {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (opt?.value) add(opt.value, opt.textContent!.trim());
+        });
+
+        return {
+            init(ids: string[], allItems: { id: string; name: string }[]) {
+                selected.forEach(b => b.remove());
+                selected.clear();
+                ids.forEach(id => {
+                    const item = allItems.find(i => i.id === id);
+                    if (item) add(id, item.name);
+                });
+                refreshEmpty();
+            },
+            getIds(): string[] {
+                return Array.from(selected.keys());
+            },
+        };
     }
 
+    const channelMulti = makeMultiSelect(
+        document.getElementById('welcome-channel') as HTMLSelectElement,
+        document.getElementById('welcome-channel-add-btn') as HTMLButtonElement,
+        document.getElementById('welcome-channel-badges')!,
+        document.getElementById('welcome-channel-empty')!
+    );
+
+    const roleMulti = makeMultiSelect(
+        document.getElementById('welcome-role') as HTMLSelectElement,
+        document.getElementById('welcome-role-add-btn') as HTMLButtonElement,
+        document.getElementById('welcome-role-badges')!,
+        document.getElementById('welcome-role-empty')!
+    );
+
+    (window as any).welcomeModule = {
+        initChannels(ids: string[], channels: { id: string; name: string }[]) {
+            const select = document.getElementById('welcome-channel') as HTMLSelectElement;
+            select.innerHTML = '<option value="">Select a channel...</option>';
+            channels.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.name;
+                select.appendChild(o);
+            });
+            const aiEnabled: boolean = (document.getElementById('toggle-ai-messages') as HTMLInputElement).checked;
+            welcomeMessageDiv.style.display = aiEnabled ? "none" : "";
+            aiPromptDiv.style.display = aiEnabled ? "" : "none";
+            channelMulti.init(ids, channels);
+        },
+        initRoles(ids: string[], roles: { id: string; name: string }[]) {
+            const select = document.getElementById('welcome-role') as HTMLSelectElement;
+            select.innerHTML = '<option value="">Select a role...</option>';
+            roles.forEach(r => {
+                const o = document.createElement('option');
+                o.value = r.id; o.textContent = r.name;
+                select.appendChild(o);
+            });
+            roleMulti.init(ids, roles);
+        },
+        getChannelIds(): string[] { return channelMulti.getIds(); },
+        getRoleIds(): string[] { return roleMulti.getIds(); },
+    };
 </script>

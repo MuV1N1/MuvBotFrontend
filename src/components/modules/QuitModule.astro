@@ -3,35 +3,86 @@
     <div class="space-y-6">
         <div id="quit-config" class="transition-all duration-300 ease-in-out">
             <div id="quit-message-div">
-                <label for="quit-message" class="block text-sm font-medium text-gray-300 mb-2">Quit
-                    Message</label>
+                <label for="quit-message" class="block text-sm font-medium text-gray-300 mb-2">Quit Message</label>
                 <textarea id="quit-message" name="quit-message" rows="3" maxlength="254"
                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"></textarea>
-                <p class="text-xs text-gray-500 mt-1 mb-2">Use {'{user}'} to mention the user.</p>
+                <p class="text-xs text-gray-500 mt-1 mb-4">Use {'{user}'} to mention the user.</p>
             </div>
-            <label for="quit-channel" class="block text-sm font-medium text-gray-300 mb-2">Quit Channel</label>
-            <select id="quit-channel" name="quit-channel"
-                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
-                <option id="default-option">Select a channel</option>
-            </select>
+
+            <!-- Quit Channels (multi) -->
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Quit Channels</label>
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[28px]" id="quit-channel-badges">
+                    <span id="quit-channel-empty" class="text-xs text-gray-500 italic">No channels selected</span>
+                </div>
+                <div class="flex gap-2">
+                    <select id="quit-channel" name="quit-channel"
+                            class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                        <option value="">Select a channel...</option>
+                    </select>
+                    <button type="button" id="quit-channel-add-btn"
+                            class="shrink-0 px-4 py-2 text-sm bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors">
+                        Add
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-<style>
-    .toggle-checkbox:checked {
-        right: 0;
-        border-color: #68D391;
-    }
-    quit
-    .toggle-checkbox:checked + .toggle-label {
-        background-color: #68D391;
-    }
 
-    .toggle-checkbox {
-        right: 50%;
-        transition: all 0.3s;
-    }
-</style>
 <script>
+    function makeBadge(label: string, onRemove: () => void): HTMLSpanElement {
+        const badge = document.createElement('span');
+        badge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-900/60 text-indigo-300 border border-indigo-700/50';
+        badge.innerHTML = `${label}<button type="button" class="hover:text-red-400 transition-colors ml-1">&times;</button>`;
+        (badge.querySelector('button') as HTMLButtonElement).addEventListener('click', onRemove);
+        return badge;
+    }
 
+    const selectEl = document.getElementById('quit-channel') as HTMLSelectElement;
+    const addBtn = document.getElementById('quit-channel-add-btn') as HTMLButtonElement;
+    const badgesDiv = document.getElementById('quit-channel-badges')!;
+    const emptySpan = document.getElementById('quit-channel-empty')!;
+
+    const selected = new Map<string, HTMLSpanElement>();
+
+    function refreshEmpty() {
+        emptySpan.classList.toggle('hidden', selected.size > 0);
+    }
+
+    function addChannel(id: string, label: string) {
+        if (!id || selected.has(id)) return;
+        const badge = makeBadge(label, () => {
+            badge.remove();
+            selected.delete(id);
+            refreshEmpty();
+        });
+        selected.set(id, badge);
+        badgesDiv.appendChild(badge);
+        refreshEmpty();
+    }
+
+    addBtn.addEventListener('click', () => {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (opt?.value) addChannel(opt.value, opt.textContent!.trim());
+    });
+
+    (window as any).quitModule = {
+        initChannels(ids: string[], channels: { id: string; name: string }[]) {
+            selectEl.innerHTML = '<option value="">Select a channel...</option>';
+            channels.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.name;
+                selectEl.appendChild(o);
+            });
+            selected.forEach(b => b.remove());
+            selected.clear();
+            ids.forEach(id => {
+                const ch = channels.find(c => c.id === id);
+                if (ch) addChannel(ch.id, ch.name);
+            });
+            refreshEmpty();
+        },
+        getChannelIds(): string[] { return Array.from(selected.keys()); },
+    };
 </script>
