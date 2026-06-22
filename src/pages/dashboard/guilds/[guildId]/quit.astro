@@ -1,120 +1,70 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
 import Navbar from '../../../../components/Navbar.astro';
-import QuitModule from "../../../../components/modules/QuitModule.astro";
+import QuitModule from '../../../../components/modules/QuitModule.astro';
+import { apiBase } from '../../../../config/public';
 
-export const prerender = false;
-const {guildId} = Astro.params;
+const token = Astro.cookies.get('access_token')?.value;
+if (!token) return Astro.redirect('/');
+
+const { guildId } = Astro.params;
+
+const [setRes, channelRes] = await Promise.all([
+    fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers: { 'Authorization': `Bearer ${token}` } }),
+    fetch(`${apiBase}/api/guilds/${guildId}/channels`, { headers: { 'Authorization': `Bearer ${token}` } }),
+]);
+if (setRes.status === 401) return Astro.redirect('/');
+
+const settings = await setRes.json();
+const channels = await channelRes.json();
 ---
 
 <Layout title="Quit Settings">
-    <Navbar/>
+    <Navbar />
     <main id="guild-quit-main" data-guild-id={guildId} class="container mx-auto px-4 py-8 max-w-4xl">
         <a href={`/dashboard/guilds/${guildId}`} class="text-gray-400 hover:text-white mb-6 inline-flex items-center">
             &larr; Back to Modules
         </a>
-
         <h1 class="text-3xl font-bold text-white mb-8">Quit Settings</h1>
-
-        <div id="loading" class="text-center text-gray-400">Loading...</div>
-
-        <div id="content" class="hidden">
-            <form id="settings-form" class="space-y-6">
-                <!-- Reuse Component -->
-                <QuitModule/>
-
-                <div class="flex justify-end pt-4">
-                    <button type="submit"
-                            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg">
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
+        <form id="settings-form" class="space-y-6">
+            <QuitModule settings={settings.quit} channels={channels} />
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg">
+                    Save Changes
+                </button>
+            </div>
+        </form>
     </main>
+    <script type="application/json" id="settings-data" set:html={JSON.stringify(settings)} />
+    <script type="application/json" id="channels-data" set:html={JSON.stringify(channels)} />
 </Layout>
 
 <script>
     import { getCookie } from '../../../../utils/auth';
     import { apiBase } from '../../../../config/public';
+
     const token = getCookie('access_token');
-    const guildId = document.getElementById('guild-quit-main').dataset.guildId;
+    const guildId = document.getElementById('guild-quit-main')!.dataset.guildId!;
+    const settings = JSON.parse(document.getElementById('settings-data')!.textContent!);
+    const channels = JSON.parse(document.getElementById('channels-data')!.textContent!);
+    const form = document.getElementById('settings-form') as HTMLFormElement;
 
-    if (!token) window.location.href = '/';
-
-    async function init() {
-        try {
-            // Fetch Settings
-            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                headers: {'Authorization': `Bearer ${token}`}
-            });
-
-            const channelRes = await fetch(`${apiBase}/api/guilds/${guildId}/channels`, {
-                headers: {'Authorization': `Bearer ${token}`}
-            });
-
-            const settings = await setRes.json();
-            const channels = await channelRes.json();
-
-            // Populate
-            const form = document.getElementById('settings-form') as HTMLFormElement;
-            form.querySelector('[name="quit-message"]').value = settings.quit.message || '';
-
-            const channelSelect = document.getElementById('quit-channel');
-
-            if(settings.quit.channelId === ""){
-                const defaultOptionElm = document.getElementById("default-option") as HTMLOptionElement;
-                defaultOptionElm.selected = true;
-            }
-
-            channels.forEach(channel => {
-                const option = document.createElement("option");
-                option.id = channel.id;
-                option.value = channel.id;
-                option.textContent = channel.name
-                option.selected = channel.id === settings.quit.channelId
-                channelSelect.append(option)
-            });
-
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('content').classList.remove('hidden');
-
-            // Save
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                
-                settings.quit.message = formData.get('quit-message');
-                const selectedChannelId = formData.get('quit-channel');
-                const selectedRoleId = formData.get('quit-role')
-
-                if(selectedChannelId && selectedChannelId !== "Select a channel") {
-                    settings.quit.channelId = selectedChannelId;
-                    const selectedChannel = channels.find(c => c.id === selectedChannelId);
-                    if (selectedChannel) {
-                        settings.quit.channelName = selectedChannel.name;
-                    }
-                }
-
-
-
-                const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-
-                if (res.ok) alert('Saved!');
-                else alert('Error saving.');
-            };
-
-        } catch (e) {
-            console.error(e);
-            window.location.href = `/dashboard/guilds/${guildId}`;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        settings.quit.message = formData.get('quit-message') as string;
+        const selectedChannelId = formData.get('quit-channel') as string;
+        if (selectedChannelId && selectedChannelId !== 'Select a channel') {
+            settings.quit.channelId = selectedChannelId;
+            const ch = channels.find((c: any) => c.id === selectedChannelId);
+            if (ch) settings.quit.channelName = ch.name;
         }
-    }
-    init();
+        const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        if (res.ok) alert('Saved!');
+        else alert('Error saving.');
+    });
 </script>

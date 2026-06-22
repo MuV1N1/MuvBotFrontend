@@ -1,40 +1,42 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
 import Navbar from '../../../../components/Navbar.astro';
+import { apiBase } from '../../../../config/public';
 
-export const prerender = false;
+const token = Astro.cookies.get('access_token')?.value;
+if (!token) return Astro.redirect('/');
 
 const { guildId } = Astro.params;
+
+const [guildRes, setRes] = await Promise.all([
+    fetch(`${apiBase}/api/guilds/${guildId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+    fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers: { 'Authorization': `Bearer ${token}` } }),
+]);
+if (guildRes.status === 401) return Astro.redirect('/');
+if (!guildRes.ok) return Astro.redirect('/dashboard');
+
+const guild = await guildRes.json();
+const settings = await setRes.json();
+const welcomeEnabled = settings.welcome?.enabled ?? false;
+const quitEnabled = settings.quit?.enabled ?? false;
 ---
 
 <Layout title="Guild Dashboard">
     <Navbar />
     <main id="guild-dashboard-main" data-guild-id={guildId} class="container mx-auto px-4 py-8 max-w-4xl">
-        <!-- Header -->
-        <div id="header-loading" class="animate-pulse flex items-center mb-8 bg-gray-800 p-6 rounded-xl border border-gray-700 h-32">
-            <div class="w-20 h-20 bg-gray-700 rounded-full mr-6"></div>
-            <div class="h-8 bg-gray-700 w-1/3 rounded"></div>
-        </div>
-
-        <div id="header-content" class="hidden flex items-center mb-8 bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <img id="guild-icon" src="" alt="Guild Icon" class="w-20 h-20 rounded-full mr-6 shadow-lg" />
+        <div class="flex items-center mb-8 bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <img src={guild.iconUrl || 'https://via.placeholder.com/128'} alt="Guild Icon" class="w-20 h-20 rounded-full mr-6 shadow-lg" />
             <div>
-                <h1 id="guild-name" class="text-3xl font-bold text-white mb-2"></h1>
+                <h1 class="text-3xl font-bold text-white mb-2">{guild.name}</h1>
                 <p class="text-gray-400 font-mono text-sm">ID: {guildId}</p>
             </div>
         </div>
 
-        <!-- Modules Grid -->
-        <div id="loading" class="text-center text-gray-400 py-12">Loading modules...</div>
-
-        <div id="content" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- General Module (Always Enabled) -->
             <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-purple-500 transition-colors group relative">
                 <div class="absolute top-4 right-4">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Core
-                    </span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Core</span>
                 </div>
                 <h3 class="text-xl font-bold text-white mb-2">General</h3>
                 <p class="text-gray-400 text-sm mb-6">Basic bot configuration like command prefix.</p>
@@ -48,12 +50,15 @@ const { guildId } = Astro.params;
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-bold text-white">Welcome</h3>
                     <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="module-toggle" id="toggle-welcome" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <input type="checkbox" id="toggle-welcome" data-module="welcome"
+                               class="module-toggle toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                               checked={welcomeEnabled} />
                         <label for="toggle-welcome" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
                     </div>
                 </div>
                 <p class="text-gray-400 text-sm mb-6">Greet new members with customizable messages.</p>
-                <a href={`/dashboard/guilds/${guildId}/welcome`} id="btn-welcome" class="inline-block w-full text-center px-4 py-2 bg-gray-700 text-gray-400 rounded-lg cursor-not-allowed pointer-events-none transition-colors">
+                <a href={`/dashboard/guilds/${guildId}/welcome`} id="btn-welcome"
+                   class={`inline-block w-full text-center px-4 py-2 rounded-lg transition-colors ${welcomeEnabled ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-700 text-gray-400 cursor-not-allowed pointer-events-none'}`}>
                     Configure
                 </a>
             </div>
@@ -63,115 +68,65 @@ const { guildId } = Astro.params;
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-bold text-white">Quit</h3>
                     <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="module-toggle" id="toggle-quit" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <input type="checkbox" id="toggle-quit" data-module="quit"
+                               class="module-toggle toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                               checked={quitEnabled} />
                         <label for="toggle-quit" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
                     </div>
                 </div>
-                <p class="text-gray-400 text-sm mb-6">Greet new members with customizable messages.</p>
-                <a href={`/dashboard/guilds/${guildId}/quit`} id="btn-quit" class="inline-block w-full text-center px-4 py-2 bg-gray-700 text-gray-400 rounded-lg cursor-not-allowed pointer-events-none transition-colors">
+                <p class="text-gray-400 text-sm mb-6">Send a message when a member leaves the server.</p>
+                <a href={`/dashboard/guilds/${guildId}/quit`} id="btn-quit"
+                   class={`inline-block w-full text-center px-4 py-2 rounded-lg transition-colors ${quitEnabled ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-700 text-gray-400 cursor-not-allowed pointer-events-none'}`}>
                     Configure
                 </a>
             </div>
         </div>
     </main>
+    <script type="application/json" id="settings-data" set:html={JSON.stringify(settings)} />
 </Layout>
 
 <style>
-    .toggle-checkbox:checked {
-        right: 0;
-        border-color: #68D391;
-    }
-    .toggle-checkbox:checked + .toggle-label {
-        background-color: #68D391;
-    }
-    .toggle-checkbox {
-        right: 50%; /* Initial position */
-        transition: all 0.3s;
-    }
+    .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+    .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
+    .toggle-checkbox { right: 50%; transition: all 0.3s; }
 </style>
 
 <script>
     import { getCookie } from '../../../../utils/auth';
     import { apiBase } from '../../../../config/public';
+
     const token = getCookie('access_token');
-    const guildId = document.getElementById('guild-dashboard-main').dataset.guildId;
+    const guildId = document.getElementById('guild-dashboard-main')!.dataset.guildId!;
+    const settings = JSON.parse(document.getElementById('settings-data')!.textContent!);
 
-    if (!token) window.location.href = '/';
+    document.querySelectorAll<HTMLInputElement>('.module-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async () => {
+            const moduleName = toggle.dataset.module!;
+            const enabled = toggle.checked;
+            const btn = document.getElementById(`btn-${moduleName}`);
 
-    async function init() {
-        try {
-            // Fetch Guild
-            const guildRes = await fetch(`${apiBase}/api/guilds/${guildId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!guildRes.ok) throw new Error('Auth failed');
-            const guild = await guildRes.json();
-            
-            document.getElementById('header-loading').classList.add('hidden');
-            const header = document.getElementById('header-content');
-            header.classList.remove('hidden');
-            header.querySelector('#guild-name').textContent = guild.name;
-            header.querySelector('#guild-icon').src = guild.iconUrl || 'https://via.placeholder.com/128';
+            settings[moduleName].enabled = enabled;
 
-            // Fetch Settings
-            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const settings = await setRes.json();
-
-            // Setup Toggles
-            setupModule('welcome', settings.welcome.enabled, settings);
-            setupModule("quit", settings.quit.enabled, settings)
-
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('content').classList.remove('hidden');
-
-        } catch (e) {
-            console.error(e);
-            window.location.href = '/dashboard';
-        }
-    }
-
-    function setupModule(name, isEnabled, allSettings) {
-        const toggle = document.getElementById(`toggle-${name}`);
-        const btn = document.getElementById(`btn-${name}`);
-        
-        toggle.checked = isEnabled;
-        updateButtonState(btn, isEnabled);
-
-        toggle.onchange = async (e) => {
-            const enabled = e.target.checked;
-            updateButtonState(btn, enabled);
-            
-            allSettings[name].enabled = enabled;
-            
             try {
-                 await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
+                await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
                     method: 'PUT',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(allSettings)
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
                 });
-            } catch (err) {
-                console.error("Failed to toggle module", err);
-                toggle.checked = !enabled; // Revert
-                updateButtonState(btn, !enabled);
-                alert("Failed to save change");
+                if (btn) {
+                    if (enabled) {
+                        btn.classList.remove('bg-gray-700', 'text-gray-400', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700');
+                    } else {
+                        btn.classList.add('bg-gray-700', 'text-gray-400', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700');
+                    }
+                }
+            } catch {
+                toggle.checked = !enabled;
+                settings[moduleName].enabled = !enabled;
+                alert('Failed to save change');
             }
-        };
-    }
-
-    function updateButtonState(btn, enabled) {
-        if (enabled) {
-            btn.classList.remove('bg-gray-700', 'text-gray-400', 'cursor-not-allowed', 'pointer-events-none');
-            btn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700');
-        } else {
-            btn.classList.add('bg-gray-700', 'text-gray-400', 'cursor-not-allowed', 'pointer-events-none');
-            btn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700');
-        }
-    }
-
-    init();
+        });
+    });
 </script>
