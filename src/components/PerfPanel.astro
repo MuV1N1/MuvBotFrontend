@@ -1,0 +1,104 @@
+<div id="perf-widget" class="fixed bottom-4 right-4 z-50 font-mono text-xs select-none">
+  <button
+    id="perf-toggle"
+    class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/90 border border-gray-700 rounded-full shadow-lg hover:border-gray-500 transition-colors cursor-pointer"
+  >
+    <span id="perf-dot" class="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0"></span>
+    <span id="perf-badge" class="text-gray-400">perf</span>
+  </button>
+
+  <div
+    id="perf-panel"
+    class="hidden absolute bottom-10 right-0 w-72 bg-gray-900/95 border border-gray-700 rounded-xl shadow-2xl p-4 backdrop-blur-md"
+  >
+    <div class="text-gray-500 font-semibold mb-3 text-[10px] uppercase tracking-widest">Performance</div>
+
+    <div class="mb-3 pb-3 border-b border-gray-800 space-y-1">
+      <div class="flex justify-between items-center">
+        <span class="text-gray-400">Page HTML</span>
+        <span id="perf-page-ms" class="text-white font-medium">–</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-gray-500">TTFB</span>
+        <span id="perf-ttfb-ms" class="text-gray-400">–</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-gray-500 font-semibold mb-2 text-[10px] uppercase tracking-widest">API Calls</div>
+      <div id="perf-api-list" class="space-y-1.5 max-h-48 overflow-y-auto">
+        <div class="text-gray-600">No calls yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { apiBase } from '../config/public';
+
+  const toggle  = document.getElementById('perf-toggle')!;
+  const panel   = document.getElementById('perf-panel')!;
+  const dot     = document.getElementById('perf-dot')!;
+  const badge   = document.getElementById('perf-badge')!;
+  const pageMsEl = document.getElementById('perf-page-ms')!;
+  const ttfbMsEl = document.getElementById('perf-ttfb-ms')!;
+  const apiList  = document.getElementById('perf-api-list')!;
+
+  let open = false;
+  toggle.addEventListener('click', () => {
+    open = !open;
+    panel.classList.toggle('hidden', !open);
+  });
+
+  function color(ms: number) {
+    return ms < 200 ? 'text-green-400' : ms < 500 ? 'text-yellow-400' : 'text-red-400';
+  }
+  function dotColor(ms: number) {
+    return ms < 200 ? 'bg-green-400' : ms < 500 ? 'bg-yellow-400' : 'bg-red-500';
+  }
+  function shortUrl(url: string) {
+    const path = url.startsWith(apiBase) ? url.slice(apiBase.length) : url;
+    return path.length > 36 ? '…' + path.slice(-35) : path;
+  }
+
+  function render() {
+    const calls: Array<{ url: string; ms: number; status: number }> =
+      (window as any).__perfCalls ?? [];
+
+    if (calls.length === 0) {
+      apiList.innerHTML = '<div class="text-gray-600">No calls yet</div>';
+    } else {
+      apiList.innerHTML = calls
+        .map(
+          c => `<div class="flex items-center gap-2">
+            <span class="text-gray-400 truncate flex-1 min-w-0" title="${c.url}">${shortUrl(c.url)}</span>
+            <span class="text-gray-600 w-8 text-right flex-shrink-0">${c.status || '—'}</span>
+            <span class="${color(c.ms)} w-14 text-right flex-shrink-0 font-medium">${c.ms}ms</span>
+          </div>`
+        )
+        .join('');
+    }
+
+    const maxMs = calls.length ? Math.max(...calls.map(c => c.ms)) : null;
+    if (maxMs !== null) {
+      badge.textContent = `API ${maxMs}ms`;
+      badge.className = color(maxMs);
+      dot.className = `w-2 h-2 rounded-full flex-shrink-0 ${dotColor(maxMs)}`;
+    }
+  }
+
+  window.addEventListener('load', () => {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (nav) {
+      const docMs  = Math.round(nav.responseEnd - nav.startTime);
+      const ttfb   = Math.round(nav.responseStart - nav.startTime);
+      pageMsEl.textContent = `${docMs}ms`;
+      pageMsEl.className   = `font-medium ${color(docMs)}`;
+      ttfbMsEl.textContent = `${ttfb}ms`;
+      ttfbMsEl.className   = color(ttfb);
+    }
+    render();
+  });
+
+  (window as any).__perfUpdate = render;
+</script>
