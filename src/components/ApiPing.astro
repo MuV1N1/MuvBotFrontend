@@ -1,0 +1,39 @@
+<div id="api-ping" class="flex items-center gap-1.5 text-xs text-gray-400" title="API response time">
+    <span id="ping-dot" class="inline-block w-2 h-2 rounded-full bg-gray-600"></span>
+    <span id="ping-label">–</span>
+</div>
+
+<script>
+    import { apiBase } from '../config/public';
+
+    const dot = document.getElementById('ping-dot');
+    const label = document.getElementById('ping-label');
+
+    async function measurePing() {
+        const start = performance.now();
+        try {
+            await fetch(`${apiBase}/actuator/health`, { method: 'HEAD', cache: 'no-store' });
+        } catch {
+            // server unreachable or CORS – time still reflects network round-trip
+        }
+        return Math.round(performance.now() - start);
+    }
+
+    async function updatePing() {
+        if (!dot || !label) return;
+        const ms = await measurePing();
+        label.textContent = `${ms} ms`;
+
+        dot.classList.remove('bg-green-400', 'bg-yellow-400', 'bg-red-500', 'bg-gray-600');
+        if (ms < 150) {
+            dot.classList.add('bg-green-400');
+        } else if (ms < 500) {
+            dot.classList.add('bg-yellow-400');
+        } else {
+            dot.classList.add('bg-red-500');
+        }
+    }
+
+    updatePing();
+    setInterval(updatePing, 30_000);
+</script>

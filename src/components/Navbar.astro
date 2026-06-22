@@ -1,8 +1,13 @@
+---
+import ApiPing from './ApiPing.astro';
+---
+
 <nav class="flex justify-between items-center px-8 py-4 bg-gray-900/50 backdrop-blur-md border-b border-gray-800">
     <div class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
         MuvBot
     </div>
     <div class="flex items-center space-x-6">
+        <ApiPing />
         <a href="/" class="text-gray-300 hover:text-white transition-colors duration-200">Home</a>
         {
             Astro.originPathname == "/dashboard/" ? null :
