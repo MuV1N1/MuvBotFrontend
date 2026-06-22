@@ -1,0 +1,250 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Navbar from "@components/Navbar.astro";
+import WhitelistModule from "@components/modules/extensions/mc/WhitelistModule.astro";
+export const prerender = false;
+const {guildId} = Astro.params;
+---
+
+<Layout title="Minecraft Whitelist">
+    <Navbar/>
+    <main id="mc-whitelist-main" data-guild-id={guildId} class="container mx-auto px-4 py-8 max-w-4xl">
+        <a href={`/dashboard/guilds/${guildId}`} class="text-gray-400 hover:text-white mb-6 inline-flex items-center">
+            &larr; Back to Modules
+        </a>
+
+        <h1 class="text-3xl font-bold text-white mb-2">Minecraft Whitelist</h1>
+        <p class="text-gray-400 mb-8">Register your Minecraft servers and configure which Discord roles grant whitelist access. Install the plugin on your server and paste in the API key.</p>
+
+        <div id="loading" class="text-center text-gray-400 py-12">Loading...</div>
+
+        <div id="content" class="hidden space-y-6">
+            <WhitelistModule/>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    import { getCookie } from '@utils/auth';
+    import { apiBase } from '@config/public';
+
+    const token = getCookie('access_token');
+    const guildId = (document.getElementById('mc-whitelist-main') as HTMLElement).dataset.guildId!;
+
+    if (!token) window.location.href = '/';
+
+    type Server = {
+        id: string;
+        serverName: string;
+        serverIp: string | null;
+        whitelistRoleIds: string[];
+    };
+
+    type Role = { id: string; name: string };
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+    let allRoles: Role[] = [];
+    let servers: Server[] = [];
+
+    function buildServerCard(server: Server): string {
+        const roleBadges = server.whitelistRoleIds.map(id => {
+            const role = allRoles.find(r => r.id === id);
+            return role
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
+                       ${role.name}
+                       <button class="remove-role-btn hover:text-red-400 transition-colors" data-server-id="${server.id}" data-role-id="${id}">&times;</button>
+                   </span>`
+                : '';
+        }).join('');
+
+        const roleOptions = allRoles
+            .filter(r => !server.whitelistRoleIds.includes(r.id))
+            .map(r => `<option value="${r.id}">${r.name}</option>`)
+            .join('');
+
+        return `
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700" data-server-id="${server.id}">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">${server.serverName}</h3>
+                    ${server.serverIp ? `<p class="text-sm text-gray-400 font-mono mt-0.5">${server.serverIp}</p>` : ''}
+                </div>
+                <button class="delete-server-btn text-gray-500 hover:text-red-400 transition-colors text-sm px-3 py-1 rounded-lg border border-gray-700 hover:border-red-700"
+                        data-server-id="${server.id}">
+                    Delete
+                </button>
+            </div>
+
+            <!-- API Key -->
+            <div class="mb-5">
+                <label class="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">API Key (plugin config)</label>
+                <div class="flex items-center gap-2">
+                    <code class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-green-400 font-mono truncate select-all">${server.id}</code>
+                    <button class="copy-btn shrink-0 px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                            data-copy="${server.id}">
+                        Copy
+                    </button>
+                </div>
+            </div>
+
+            <!-- Whitelist Roles -->
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Whitelist Roles</label>
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[28px]" id="role-badges-${server.id}">
+                    ${roleBadges || '<span class="text-xs text-gray-500 italic">No roles configured — nobody will be whitelisted</span>'}
+                </div>
+                <div class="flex gap-2">
+                    <select id="role-select-${server.id}"
+                            class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
+                        <option value="">Add a role...</option>
+                        ${roleOptions}
+                    </select>
+                    <button class="add-role-btn shrink-0 px-4 py-2 text-sm bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors"
+                            data-server-id="${server.id}">
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    function renderServers() {
+        const list = document.getElementById('servers-list')!;
+        if (servers.length === 0) {
+            list.innerHTML = `
+                <div class="bg-gray-800 p-8 rounded-xl border border-dashed border-gray-700 text-center text-gray-500">
+                    <p class="text-lg font-medium mb-1">No servers registered yet</p>
+                    <p class="text-sm">Register your first Minecraft server below to get started.</p>
+                </div>
+            `;
+        } else {
+            list.innerHTML = servers.map(buildServerCard).join('');
+        }
+        attachCardListeners();
+    }
+
+    function attachCardListeners() {
+        // Copy API key
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = (btn as HTMLElement).dataset.copy!;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy', 2000);
+                });
+            });
+        });
+
+        // Delete server
+        document.querySelectorAll('.delete-server-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const serverId = (btn as HTMLElement).dataset.serverId!;
+                if (!confirm('Delete this server registration? The API key will stop working.')) return;
+
+                const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers/${serverId}`, {
+                    method: 'DELETE',
+                    headers,
+                });
+                if (res.ok) {
+                    servers = servers.filter(s => s.id !== serverId);
+                    renderServers();
+                } else {
+                    alert('Failed to delete server.');
+                }
+            });
+        });
+
+        // Add role to server
+        document.querySelectorAll('.add-role-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const serverId = (btn as HTMLElement).dataset.serverId!;
+                const select = document.getElementById(`role-select-${serverId}`) as HTMLSelectElement;
+                const roleId = select.value;
+                if (!roleId) return;
+
+                const server = servers.find(s => s.id === serverId)!;
+                const newRoleIds = [...server.whitelistRoleIds, roleId];
+                await patchRoles(serverId, newRoleIds);
+            });
+        });
+
+        // Remove role badge
+        document.querySelectorAll('.remove-role-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const { serverId, roleId } = (btn as HTMLElement).dataset as { serverId: string; roleId: string };
+                const server = servers.find(s => s.id === serverId)!;
+                const newRoleIds = server.whitelistRoleIds.filter(id => id !== roleId);
+                await patchRoles(serverId, newRoleIds);
+            });
+        });
+    }
+
+    async function patchRoles(serverId: string, roleIds: string[]) {
+        const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers/${serverId}/roles`, {
+            method: 'PUT',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roleIds }),
+        });
+        if (res.ok) {
+            const updated: Server = await res.json();
+            servers = servers.map(s => s.id === serverId ? updated : s);
+            renderServers();
+        } else {
+            alert('Failed to update roles.');
+        }
+    }
+
+    document.getElementById('add-server-btn')!.addEventListener('click', async () => {
+        const nameInput = document.getElementById('new-server-name') as HTMLInputElement;
+        const ipInput = document.getElementById('new-server-ip') as HTMLInputElement;
+
+        const serverName = nameInput.value.trim();
+        if (!serverName) { nameInput.focus(); return; }
+
+        const btn = document.getElementById('add-server-btn')!;
+        btn.textContent = 'Registering...';
+        btn.setAttribute('disabled', 'true');
+
+        const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ serverName, serverIp: ipInput.value.trim() || null }),
+        });
+
+        btn.textContent = '+ Register Server';
+        btn.removeAttribute('disabled');
+
+        if (res.ok) {
+            const newServer: Server = await res.json();
+            servers = [newServer, ...servers];
+            nameInput.value = '';
+            ipInput.value = '';
+            renderServers();
+        } else {
+            alert('Failed to register server.');
+        }
+    });
+
+    async function init() {
+        try {
+            const [serversRes, rolesRes] = await Promise.all([
+                fetch(`${apiBase}/api/guilds/${guildId}/mc/servers`, { headers }),
+                fetch(`${apiBase}/api/guilds/${guildId}/roles`, { headers }),
+            ]);
+
+            if (!serversRes.ok) throw new Error('Auth failed');
+
+            [servers, allRoles] = await Promise.all([serversRes.json(), rolesRes.json()]);
+
+            document.getElementById('loading')!.classList.add('hidden');
+            document.getElementById('content')!.classList.remove('hidden');
+            renderServers();
+        } catch (e) {
+            console.error(e);
+            window.location.href = `/dashboard/guilds/${guildId}`;
+        }
+    }
+
+    init();
+</script>

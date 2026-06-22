@@ -33,11 +33,24 @@ import Navbar from '../components/Navbar.astro';
     import { getCookie } from '../utils/auth';
     import { apiBase, discordClientId } from '../config/public';
 
+    let guildOrder: string[] = JSON.parse(localStorage.getItem('guild_order') || '[]');
+    let dragSrcId: string | null = null;
+
     window.allGuilds = [];
 
+    function getOrderedVisibleGuilds() {
+        const visible = window.allGuilds.filter((g: any) => !g.hidden);
+        if (guildOrder.length === 0) return visible;
+        return [...visible].sort((a: any, b: any) => {
+            const ai = guildOrder.indexOf(a.discordId);
+            const bi = guildOrder.indexOf(b.discordId);
+            return (ai === -1 ? 9999 : ai) - (bi === -1 ? 9999 : bi);
+        });
+    }
+
     window.renderGuilds = function() {
-        const visibleGuilds = window.allGuilds.filter(g => !g.hidden);
-        const hiddenGuilds = window.allGuilds.filter(g => g.hidden);
+        const visibleGuilds = getOrderedVisibleGuilds();
+        const hiddenGuilds = window.allGuilds.filter((g: any) => g.hidden);
 
         const list = document.getElementById('guild-list');
         const hiddenList = document.getElementById('hidden-guild-list');
@@ -46,13 +59,13 @@ import Navbar from '../components/Navbar.astro';
         if (visibleGuilds.length === 0) {
              list.innerHTML = '<div class="col-span-full text-center text-gray-500">No visible servers found.</div>';
         } else {
-             list.innerHTML = visibleGuilds.map(g => createCard(g)).join('');
+             list.innerHTML = visibleGuilds.map((g: any) => createCard(g, true)).join('');
         }
 
         if (hiddenGuilds.length > 0) {
             hiddenTitle.classList.remove('hidden');
             hiddenList.classList.remove('hidden');
-            hiddenList.innerHTML = hiddenGuilds.map(g => createCard(g)).join('');
+            hiddenList.innerHTML = hiddenGuilds.map((g: any) => createCard(g, false)).join('');
         } else {
             hiddenTitle.classList.add('hidden');
             hiddenList.classList.add('hidden');
@@ -60,12 +73,22 @@ import Navbar from '../components/Navbar.astro';
         }
     }
 
-    function createCard(g) {
+    function createCard(g: any, draggable: boolean) {
+        const dragAttrs = draggable ? `draggable="true" data-guild-id="${g.discordId}"` : '';
+        const dragHandle = draggable ? `
+            <div class="absolute top-4 left-4 text-gray-600 group-hover:text-gray-400 transition-colors pointer-events-none" title="Drag to reorder">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="9" cy="4" r="1.5"/><circle cx="15" cy="4" r="1.5"/>
+                    <circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/>
+                    <circle cx="9" cy="16" r="1.5"/><circle cx="15" cy="16" r="1.5"/>
+                </svg>
+            </div>` : '';
         return `
-            <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center hover:bg-gray-750 transition-colors border border-gray-700 hover:border-purple-500/50 group relative">
+            <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center hover:bg-gray-750 transition-colors border border-gray-700 hover:border-purple-500/50 group relative${draggable ? ' cursor-grab' : ''}" ${dragAttrs}>
+                ${dragHandle}
                 <button onclick="toggleGuildVisibility('${g.discordId}', ${g.hidden})" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors cursor-pointer z-10" title="${g.hidden ? 'Unhide' : 'Hide'}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        ${g.hidden 
+                        ${g.hidden
                             ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>'
                             : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>'
                         }
@@ -80,6 +103,62 @@ import Navbar from '../components/Navbar.astro';
                     </a>
             </div>
         `;
+    }
+
+    function initDragAndDrop() {
+        const list = document.getElementById('guild-list');
+        if (!list) return;
+
+        list.addEventListener('dragstart', (e: DragEvent) => {
+            const card = (e.target as Element).closest('[data-guild-id]') as HTMLElement | null;
+            if (!card) return;
+            if ((e.target as Element).closest('a, button')) { e.preventDefault(); return; }
+            dragSrcId = card.dataset.guildId!;
+            e.dataTransfer!.effectAllowed = 'move';
+            setTimeout(() => card.classList.add('opacity-40'), 0);
+        });
+
+        list.addEventListener('dragend', () => {
+            list.querySelectorAll('[data-guild-id]').forEach(c => {
+                c.classList.remove('opacity-40', 'ring-2', 'ring-purple-400');
+            });
+            dragSrcId = null;
+        });
+
+        list.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            e.dataTransfer!.dropEffect = 'move';
+            const card = (e.target as Element).closest('[data-guild-id]') as HTMLElement | null;
+            if (!card || card.dataset.guildId === dragSrcId) return;
+            list.querySelectorAll('[data-guild-id]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400'));
+            card.classList.add('ring-2', 'ring-purple-400');
+        });
+
+        list.addEventListener('dragleave', (e: DragEvent) => {
+            if (!list.contains(e.relatedTarget as Node)) {
+                list.querySelectorAll('[data-guild-id]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400'));
+            }
+        });
+
+        list.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            const card = (e.target as Element).closest('[data-guild-id]') as HTMLElement | null;
+            if (!card || !dragSrcId || card.dataset.guildId === dragSrcId) return;
+
+            const targetId = card.dataset.guildId!;
+            const visible = getOrderedVisibleGuilds();
+            const srcIdx = visible.findIndex((g: any) => g.discordId === dragSrcId);
+            const tgtIdx = visible.findIndex((g: any) => g.discordId === targetId);
+
+            const reordered = [...visible];
+            const [moved] = reordered.splice(srcIdx, 1);
+            reordered.splice(tgtIdx, 0, moved);
+
+            guildOrder = reordered.map((g: any) => g.discordId);
+            localStorage.setItem('guild_order', JSON.stringify(guildOrder));
+
+            window.renderGuilds();
+        });
     }
 
     window.toggleGuildVisibility = async function(guildId, isHidden) {
@@ -140,6 +219,7 @@ import Navbar from '../components/Navbar.astro';
     }
     
     loadGuilds();
+    initDragAndDrop();
 
     // Welcome Popup Logic
     const popup = document.getElementById('welcome-popup');
