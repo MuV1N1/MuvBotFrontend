@@ -12,7 +12,7 @@
     async function measurePing() {
         const start = performance.now();
         try {
-            await fetch(`${apiBase}/actuator/health`, { method: 'HEAD', cache: 'no-store' });
+            await fetch(`${apiBase}/api/healthcheck`, { method: 'HEAD', cache: 'no-store' });
         } catch {
             // server unreachable or CORS – time still reflects network round-trip
         }
