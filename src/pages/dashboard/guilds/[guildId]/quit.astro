@@ -44,17 +44,13 @@ const {guildId} = Astro.params;
 
     async function init() {
         try {
-            // Fetch Settings
-            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                headers: {'Authorization': `Bearer ${token}`}
-            });
+            const headers = {'Authorization': `Bearer ${token}`};
+            const [setRes, channelRes] = await Promise.all([
+                fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers }),
+                fetch(`${apiBase}/api/guilds/${guildId}/channels`, { headers }),
+            ]);
 
-            const channelRes = await fetch(`${apiBase}/api/guilds/${guildId}/channels`, {
-                headers: {'Authorization': `Bearer ${token}`}
-            });
-
-            const settings = await setRes.json();
-            const channels = await channelRes.json();
+            const [settings, channels] = await Promise.all([setRes.json(), channelRes.json()]);
 
             // Populate
             const form = document.getElementById('settings-form') as HTMLFormElement;

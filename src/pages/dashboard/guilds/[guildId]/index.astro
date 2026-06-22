@@ -100,24 +100,20 @@ const { guildId } = Astro.params;
 
     async function init() {
         try {
-            // Fetch Guild
-            const guildRes = await fetch(`${apiBase}/api/guilds/${guildId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [guildRes, setRes] = await Promise.all([
+                fetch(`${apiBase}/api/guilds/${guildId}`, { headers }),
+                fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers }),
+            ]);
+
             if (!guildRes.ok) throw new Error('Auth failed');
-            const guild = await guildRes.json();
-            
+            const [guild, settings] = await Promise.all([guildRes.json(), setRes.json()]);
+
             document.getElementById('header-loading').classList.add('hidden');
             const header = document.getElementById('header-content');
             header.classList.remove('hidden');
             header.querySelector('#guild-name').textContent = guild.name;
             header.querySelector('#guild-icon').src = guild.iconUrl || 'https://via.placeholder.com/128';
-
-            // Fetch Settings
-            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const settings = await setRes.json();
 
             // Setup Toggles
             setupModule('welcome', settings.welcome.enabled, settings);
