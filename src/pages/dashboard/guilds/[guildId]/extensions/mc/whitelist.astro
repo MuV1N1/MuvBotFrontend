@@ -14,8 +14,10 @@ const {guildId} = Astro.params;
         </a>
 
         <h1 class="text-3xl font-bold text-white mb-2">Minecraft Whitelist</h1>
-        <p class="text-gray-400 mb-8">Register your Minecraft servers and configure which Discord roles grant whitelist access. Install the plugin on your server and paste in the API key.</p>
-
+        <p class="text-gray-400 mb-4">Register your Minecraft servers and configure which Discord roles grant whitelist
+            access. Install the plugin on your server and paste in the API key.</p>
+        <p class="text-gray-400 mb-8">If you need help to setup this Plugin then go checkout our video on <a
+                class="underline hover:no-underline hover:text-purple-600">YouTube</a></p>
         <div id="loading" class="text-center text-gray-400 py-12">Loading...</div>
 
         <div id="content" class="hidden space-y-6">
@@ -25,8 +27,8 @@ const {guildId} = Astro.params;
 </Layout>
 
 <script>
-    import { getCookie } from '@utils/auth';
-    import { apiBase } from '@config/public';
+    import {getCookie} from '@utils/auth';
+    import {apiBase} from '@config/public';
 
     const token = getCookie('access_token');
     const guildId = (document.getElementById('mc-whitelist-main') as HTMLElement).dataset.guildId!;
@@ -37,14 +39,16 @@ const {guildId} = Astro.params;
         id: string;
         serverName: string;
         serverIp: string | null;
+        serverVersion: string | null;
         whitelistRoleIds: string[];
     };
 
     type Role = { id: string; name: string };
 
-    const headers = { 'Authorization': `Bearer ${token}` };
+    const headers = {'Authorization': `Bearer ${token}`};
     let allRoles: Role[] = [];
     let servers: Server[] = [];
+    let draggedId: string | null = null;
 
     function buildServerCard(server: Server): string {
         const roleBadges = server.whitelistRoleIds.map(id => {
@@ -61,18 +65,29 @@ const {guildId} = Astro.params;
             .filter(r => !server.whitelistRoleIds.includes(r.id))
             .map(r => `<option value="${r.id}">${r.name}</option>`)
             .join('');
-
-        return `
-        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700" data-server-id="${server.id}">
+        return `    
+        <div class="server-card bg-gray-800 p-6 rounded-xl border border-gray-700 transition-colors" draggable="true" data-server-id="${server.id}">
             <div class="flex items-start justify-between mb-4">
-                <div>
-                    <h3 class="text-lg font-bold text-white">${server.serverName}</h3>
-                    ${server.serverIp ? `<p class="text-sm text-gray-400 font-mono mt-0.5">${server.serverIp}</p>` : ''}
+                <div class="flex items-start gap-3">
+                    <span class="text-gray-600 hover:text-gray-400 cursor-grab mt-1 shrink-0 select-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+                    </span>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">${server.serverName} ${server.serverVersion ? `(${server.serverVersion})` : ''}</h3>
+                        ${server.serverIp ? `<p class="text-sm text-gray-300 font-mono mt-0.5">${server.serverIp}</p>` : ''}
+                 
+                    </div>
                 </div>
-                <button class="delete-server-btn text-gray-500 hover:text-red-400 transition-colors text-sm px-3 py-1 rounded-lg border border-gray-700 hover:border-red-700"
-                        data-server-id="${server.id}">
-                    Delete
-                </button>
+                <div class="flex items-center gap-2">
+                    <button class="edit-server-btn text-gray-500 hover:text-purple-400 transition-colors text-sm px-3 py-1 rounded-lg border border-gray-700 hover:border-purple-700"
+                            data-server-id="${server.id}">
+                        Edit
+                    </button>
+                    <button class="delete-server-btn text-gray-500 hover:text-red-400 transition-colors text-sm px-3 py-1 rounded-lg border border-gray-700 hover:border-red-700"
+                            data-server-id="${server.id}">
+                        Delete
+                    </button>
+                </div>
             </div>
 
             <!-- API Key -->
@@ -103,6 +118,33 @@ const {guildId} = Astro.params;
                             data-server-id="${server.id}">
                         Add
                     </button>
+                </div>
+            </div>
+
+            <!-- Edit Form -->
+            <div class="edit-form hidden mt-5 pt-5 border-t border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Server Name</label>
+                        <input class="edit-name w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                               value="${server.serverName}"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Server IP</label>
+                        <input class="edit-ip w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                               value="${server.serverIp ?? ''}"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Minecraft Version</label>
+                        <input class="edit-version w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                               value="${server.serverVersion ?? ''}"/>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="save-edit-btn px-4 py-2 text-sm bg-purple-700 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors"
+                            data-server-id="${server.id}">Save</button>
+                    <button class="cancel-edit-btn px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                            data-server-id="${server.id}">Cancel</button>
                 </div>
             </div>
         </div>
@@ -172,19 +214,129 @@ const {guildId} = Astro.params;
         // Remove role badge
         document.querySelectorAll('.remove-role-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const { serverId, roleId } = (btn as HTMLElement).dataset as { serverId: string; roleId: string };
+                const {serverId, roleId} = (btn as HTMLElement).dataset as { serverId: string; roleId: string };
                 const server = servers.find(s => s.id === serverId)!;
                 const newRoleIds = server.whitelistRoleIds.filter(id => id !== roleId);
                 await patchRoles(serverId, newRoleIds);
             });
+        });
+
+        // Toggle edit form
+        document.querySelectorAll('.edit-server-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const serverId = (btn as HTMLElement).dataset.serverId!;
+                const card = document.querySelector<HTMLElement>(`.server-card[data-server-id="${serverId}"]`)!;
+                const form = card.querySelector<HTMLElement>('.edit-form')!;
+                form.classList.toggle('hidden');
+                card.draggable = form.classList.contains('hidden');
+            });
+        });
+
+        // Cancel edit
+        document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const serverId = (btn as HTMLElement).dataset.serverId!;
+                const card = document.querySelector<HTMLElement>(`.server-card[data-server-id="${serverId}"]`)!;
+                card.querySelector('.edit-form')!.classList.add('hidden');
+                card.draggable = true;
+            });
+        });
+
+        // Save edit
+        document.querySelectorAll('.save-edit-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const serverId = (btn as HTMLElement).dataset.serverId!;
+                const card = document.querySelector<HTMLElement>(`.server-card[data-server-id="${serverId}"]`)!;
+                const nameInput = card.querySelector<HTMLInputElement>('.edit-name')!;
+                const ipInput = card.querySelector<HTMLInputElement>('.edit-ip')!;
+                const versionInput = card.querySelector<HTMLInputElement>('.edit-version')!;
+
+                const serverName = nameInput.value.trim();
+                if (!serverName) {
+                    nameInput.focus();
+                    return;
+                }
+
+                btn.textContent = 'Saving...';
+                (btn as HTMLButtonElement).disabled = true;
+
+                const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers/${serverId}`, {
+                    method: 'PATCH',
+                    headers: {...headers, 'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        serverName,
+                        serverIp: ipInput.value.trim() || null,
+                        serverVersion: versionInput.value.trim() || null,
+                    }),
+                });
+
+                btn.textContent = 'Save';
+                (btn as HTMLButtonElement).disabled = false;
+
+                if (res.ok) {
+                    const updated: Server = await res.json();
+                    servers = servers.map(s => s.id === serverId ? updated : s);
+                    renderServers();
+                } else {
+                    alert('Failed to update server.');
+                }
+            });
+        });
+
+        // Drag & drop reorder
+        document.querySelectorAll<HTMLElement>('.server-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                draggedId = card.dataset.serverId!;
+                e.dataTransfer!.effectAllowed = 'move';
+                setTimeout(() => {
+                    card.style.opacity = '0.4';
+                }, 0);
+            });
+            card.addEventListener('dragend', () => {
+                card.style.opacity = '';
+                clearDropIndicators();
+            });
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                clearDropIndicators();
+                if (card.dataset.serverId !== draggedId) {
+                    card.style.borderColor = 'rgb(147, 51, 234)';
+                }
+            });
+            card.addEventListener('dragleave', () => {
+                card.style.borderColor = '';
+            });
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetId = card.dataset.serverId!;
+                if (!draggedId || draggedId === targetId) return;
+                const from = servers.findIndex(s => s.id === draggedId);
+                const to = servers.findIndex(s => s.id === targetId);
+                if (from === -1 || to === -1) return;
+                const [moved] = servers.splice(from, 1);
+                servers.splice(to, 0, moved);
+                draggedId = null;
+                renderServers();
+                fetch(`${apiBase}/api/guilds/${guildId}/mc/servers/order`, {
+                    method: 'PUT',
+                    headers: {...headers, 'Content-Type': 'application/json'},
+                    body: JSON.stringify({serverIds: servers.map(s => s.id)}),
+                });
+            });
+        });
+    }
+
+    function clearDropIndicators() {
+        document.querySelectorAll<HTMLElement>('.server-card').forEach(c => {
+            c.style.borderColor = '';
         });
     }
 
     async function patchRoles(serverId: string, roleIds: string[]) {
         const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers/${serverId}/roles`, {
             method: 'PUT',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roleIds }),
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: JSON.stringify({roleIds}),
         });
         if (res.ok) {
             const updated: Server = await res.json();
@@ -198,9 +350,13 @@ const {guildId} = Astro.params;
     document.getElementById('add-server-btn')!.addEventListener('click', async () => {
         const nameInput = document.getElementById('new-server-name') as HTMLInputElement;
         const ipInput = document.getElementById('new-server-ip') as HTMLInputElement;
+        const versionInput = document.getElementById('new-server-version') as HTMLInputElement;
 
         const serverName = nameInput.value.trim();
-        if (!serverName) { nameInput.focus(); return; }
+        if (!serverName) {
+            nameInput.focus();
+            return;
+        }
 
         const btn = document.getElementById('add-server-btn')!;
         btn.textContent = 'Registering...';
@@ -208,8 +364,12 @@ const {guildId} = Astro.params;
 
         const res = await fetch(`${apiBase}/api/guilds/${guildId}/mc/servers`, {
             method: 'POST',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ serverName, serverIp: ipInput.value.trim() || null }),
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                serverName,
+                serverIp: ipInput.value.trim() || null,
+                serverVersion: versionInput.value.trim() || null,
+            }),
         });
 
         btn.textContent = '+ Register Server';
@@ -220,6 +380,7 @@ const {guildId} = Astro.params;
             servers = [newServer, ...servers];
             nameInput.value = '';
             ipInput.value = '';
+            versionInput.value = '';
             renderServers();
         } else {
             alert('Failed to register server.');
@@ -227,22 +388,33 @@ const {guildId} = Astro.params;
     });
 
     async function init() {
+        const loadingEl = document.getElementById('loading')!;
         try {
             const [serversRes, rolesRes] = await Promise.all([
-                fetch(`${apiBase}/api/guilds/${guildId}/mc/servers`, { headers }),
-                fetch(`${apiBase}/api/guilds/${guildId}/roles`, { headers }),
+                fetch(`${apiBase}/api/guilds/${guildId}/mc/servers`, {headers}),
+                fetch(`${apiBase}/api/guilds/${guildId}/roles`, {headers}),
             ]);
 
-            if (!serversRes.ok) throw new Error('Auth failed');
+            if (serversRes.status === 401 || serversRes.status === 403) {
+                window.location.href = '/';
+                return;
+            }
+
+            if (!serversRes.ok) {
+                throw new Error(`Backend returned ${serversRes.status}`);
+            }
 
             [servers, allRoles] = await Promise.all([serversRes.json(), rolesRes.json()]);
 
-            document.getElementById('loading')!.classList.add('hidden');
+            loadingEl.classList.add('hidden');
             document.getElementById('content')!.classList.remove('hidden');
             renderServers();
         } catch (e) {
             console.error(e);
-            window.location.href = `/dashboard/guilds/${guildId}`;
+            loadingEl.innerHTML = `
+                <p class="text-red-400 font-medium mb-1">Failed to load whitelist settings.</p>
+                <p class="text-gray-500 text-sm">${e instanceof Error ? e.message : 'Unknown error'} — check the browser console for details.</p>
+            `;
         }
     }
 
