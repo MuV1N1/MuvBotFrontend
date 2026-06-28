@@ -35,7 +35,8 @@ const { guildId } = Astro.params;
 
 <script>
     import { getCookie } from '../../../../utils/auth';
-    import { apiBase } from '../../../../config/public';
+    import { apiFetch } from '../../../../utils/api';
+
     const token = getCookie('access_token');
     const guildId = document.getElementById('guild-general-main').dataset.guildId;
 
@@ -43,39 +44,28 @@ const { guildId } = Astro.params;
 
     async function init() {
         try {
-            // Fetch Settings
-            const setRes = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const settings = await setRes.json();
-            
-            // Populate
+            const settings = await apiFetch(`/api/guilds/${guildId}/settings`);
+
             const form = document.getElementById('settings-form');
             form.querySelector('[name="commandPrefix"]').value = settings.general.commandPrefix || '!';
 
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('content').classList.remove('hidden');
 
-            // Save
-             form.onsubmit = async (e) => {
+            form.onsubmit = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(form);
-                
-                // We need to preserve other settings! 
-                // So we update our local settings object and send it back.
                 settings.general.commandPrefix = formData.get('commandPrefix');
 
-                const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-
-                if (res.ok) alert('Saved!');
-                else alert('Error saving.');
+                try {
+                    await apiFetch(`/api/guilds/${guildId}/settings`, {
+                        method: 'PUT',
+                        body: JSON.stringify(settings),
+                    });
+                    alert('Saved!');
+                } catch {
+                    alert('Error saving.');
+                }
             };
 
         } catch (e) {

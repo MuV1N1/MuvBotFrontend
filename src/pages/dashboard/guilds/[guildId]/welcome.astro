@@ -35,7 +35,7 @@ const {guildId} = Astro.params;
 
 <script>
     import { getCookie } from '../../../../utils/auth';
-    import { apiBase } from '../../../../config/public';
+    import { apiFetch } from '../../../../utils/api';
 
     const token = getCookie('access_token');
     const guildId = (document.getElementById('guild-welcome-main') as HTMLElement).dataset.guildId!;
@@ -44,15 +44,10 @@ const {guildId} = Astro.params;
 
     async function init() {
         try {
-            const headers = { 'Authorization': `Bearer ${token}` };
-            const [setRes, channelRes, roleRes] = await Promise.all([
-                fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers }),
-                fetch(`${apiBase}/api/guilds/${guildId}/channels`, { headers }),
-                fetch(`${apiBase}/api/guilds/${guildId}/roles`, { headers }),
-            ]);
-
             const [settings, channels, roles] = await Promise.all([
-                setRes.json(), channelRes.json(), roleRes.json(),
+                apiFetch(`/api/guilds/${guildId}/settings`),
+                apiFetch(`/api/guilds/${guildId}/channels`),
+                apiFetch(`/api/guilds/${guildId}/roles`),
             ]);
 
             const form = document.getElementById('settings-form') as HTMLFormElement;
@@ -82,14 +77,15 @@ const {guildId} = Astro.params;
                 settings.welcome.channelIds = mod.getChannelIds();
                 settings.welcome.roleOnJoinIds = mod.getRoleIds();
 
-                const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings),
-                });
-
-                if (res.ok) alert('Saved!');
-                else alert('Error saving.');
+                try {
+                    await apiFetch(`/api/guilds/${guildId}/settings`, {
+                        method: 'PUT',
+                        body: JSON.stringify(settings),
+                    });
+                    alert('Saved!');
+                } catch {
+                    alert('Error saving.');
+                }
             };
 
         } catch (e) {

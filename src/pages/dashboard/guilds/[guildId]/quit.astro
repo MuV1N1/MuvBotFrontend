@@ -35,7 +35,7 @@ const {guildId} = Astro.params;
 
 <script>
     import { getCookie } from '../../../../utils/auth';
-    import { apiBase } from '../../../../config/public';
+    import { apiFetch } from '../../../../utils/api';
 
     const token = getCookie('access_token');
     const guildId = (document.getElementById('guild-quit-main') as HTMLElement).dataset.guildId!;
@@ -44,13 +44,10 @@ const {guildId} = Astro.params;
 
     async function init() {
         try {
-            const headers = { 'Authorization': `Bearer ${token}` };
-            const [setRes, channelRes] = await Promise.all([
-                fetch(`${apiBase}/api/guilds/${guildId}/settings`, { headers }),
-                fetch(`${apiBase}/api/guilds/${guildId}/channels`, { headers }),
+            const [settings, channels] = await Promise.all([
+                apiFetch(`/api/guilds/${guildId}/settings`),
+                apiFetch(`/api/guilds/${guildId}/channels`),
             ]);
-
-            const [settings, channels] = await Promise.all([setRes.json(), channelRes.json()]);
 
             const form = document.getElementById('settings-form') as HTMLFormElement;
             (form.querySelector('[name="quit-message"]') as HTMLTextAreaElement).value = settings.quit.message || '';
@@ -68,14 +65,15 @@ const {guildId} = Astro.params;
                 settings.quit.message = formData.get('quit-message');
                 settings.quit.channelIds = mod.getChannelIds();
 
-                const res = await fetch(`${apiBase}/api/guilds/${guildId}/settings`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings),
-                });
-
-                if (res.ok) alert('Saved!');
-                else alert('Error saving.');
+                try {
+                    await apiFetch(`/api/guilds/${guildId}/settings`, {
+                        method: 'PUT',
+                        body: JSON.stringify(settings),
+                    });
+                    alert('Saved!');
+                } catch {
+                    alert('Error saving.');
+                }
             };
 
         } catch (e) {

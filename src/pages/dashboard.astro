@@ -31,7 +31,8 @@ import Navbar from '../components/Navbar.astro';
 
 <script>
     import { getCookie } from '../utils/auth';
-    import { apiBase, discordClientId } from '../config/public';
+    import { discordClientId } from '../config/public';
+    import { apiFetch } from '../utils/api';
 
     let guildOrder: string[] = JSON.parse(localStorage.getItem('guild_order') || '[]');
     let dragSrcId: string | null = null;
@@ -162,57 +163,40 @@ import Navbar from '../components/Navbar.astro';
     }
 
     window.toggleGuildVisibility = async function(guildId, isHidden) {
-        const token = getCookie('access_token');
-        if (!token) return;
-
         const method = isHidden ? 'DELETE' : 'POST';
         try {
-            const response = await fetch(`${apiBase}/api/users/hide/${guildId}`, {
-                method: method,
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const guild = window.allGuilds.find(g => g.discordId === guildId);
-                if (guild) {
-                    guild.hidden = !isHidden;
-                    window.renderGuilds();
-                }
-            } else {
-                console.error("Failed to toggle visibility", response.status);
+            await apiFetch(`/api/users/hide/${guildId}`, { method });
+            const guild = window.allGuilds.find(g => g.discordId === guildId);
+            if (guild) {
+                guild.hidden = !isHidden;
+                window.renderGuilds();
             }
         } catch(e) {
-            console.error(e);
+            console.error("Failed to toggle visibility", e);
         }
     }
 
     async function loadGuilds() {
-        const token = getCookie('access_token'); 
-        if (!token) {
+        if (!getCookie('access_token')) {
             window.location.href = '/';
             return;
         }
 
         try {
-            const response = await fetch(`${apiBase}/api/guilds`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            window.allGuilds = await apiFetch('/api/guilds');
 
-            if (response.status === 401) {
+            if (!Array.isArray(window.allGuilds)) {
+                window.allGuilds = [];
+            }
+
+            window.renderGuilds();
+
+        } catch (e) {
+            if (e instanceof Error && e.message === '401') {
                 localStorage.removeItem('access_token');
                 window.location.href = '/';
                 return;
             }
-
-            window.allGuilds = await response.json();
-            
-            if (!Array.isArray(window.allGuilds)) {
-                window.allGuilds = [];
-            }
-            
-            window.renderGuilds();
-
-        } catch (e) {
             console.error(e);
             document.getElementById('guild-list').innerHTML = '<div class="col-span-full text-center text-red-400">Error loading servers.</div>';
         }
