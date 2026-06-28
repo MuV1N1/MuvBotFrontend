@@ -147,6 +147,14 @@ const {guildId} = Astro.params;
             categories: ['external'],
             toggleable: true,
             href: `/dashboard/guilds/${guildId}/extensions/mc/whitelist`,
+        },
+        {
+            id: 'ticketSystem',
+            name: 'Ticket System',
+            description: 'Allow members to create support tickets for assistance.',
+            categories: ['utilities'],
+            toggleable: true,
+            href: `/dashboard/guilds/${guildId}/ticketSystem`,
         }
     ];
 
