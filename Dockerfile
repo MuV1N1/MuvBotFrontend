@@ -17,7 +17,7 @@ ENV PUBLIC_DISCORD_CLIENT_ID=$PUBLIC_DISCORD_CLIENT_ID
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy project files
 COPY . .
