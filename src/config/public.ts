@@ -1,4 +1,4 @@
-/** Backend API origin (no trailing slash). Override with PUBLIC_API_URL in `.env`. */
+/** Backend API origin (no trailing slash). Override with PUBLIC_API_URL in `..env`. */
 export const apiBase =
     import.meta.env.PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:8080';
 
